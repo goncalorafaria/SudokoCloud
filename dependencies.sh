@@ -1,6 +1,8 @@
 ## compiler options
 export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
 
+source dep.config
+
 export CLASSPATH="$CLASSPATH:$PWD/tools/"
 
 ## instrumentation path
@@ -15,10 +17,9 @@ export CLASSPATH="$CLASSPATH:$PWD/project/"
 export CLASSPATH="$CLASSPATH:$PWD/project/BIT/"
 
 # AWS API
-export CLASSPATH="$CLASSPATH:$PWD/project/aws-java-sdk-1.11.751/lib/aws-java-sdk-1.11.751.jar"
+export CLASSPATH="$CLASSPATH:$AWS_DIR/lib/aws-java-sdk-1.11.751.jar"
 
-export CLASSPATH="$CLASSPATH:$PWD/project/aws-java-sdk-1.11.751/third-party/lib/*"
-
+export CLASSPATH="$CLASSPATH:$AWS_DIR/third-party/lib/*"
 
 echo ""
 echo "#######################"
