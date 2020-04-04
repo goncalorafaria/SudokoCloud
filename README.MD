@@ -4,12 +4,14 @@
 
 ## Execution.
 
-: C program for calculating execution time and test solver on many parameters.
-$ ./crun.sh 
+*  Executa o program em C para calcular tempos de vários parametros de execução e coleciona o resultados de instrumentação
 
-: Run the Solver.
-$ ./solve.sh 
+` $ ./crun.sh `
 
-: Run the Server
+*  Executa um exemplo no solver diretamente.
 
-$ ./serve.sh 
+` $ ./solve.sh `
+
+* Executa o servidor
+
+` $ ./serve.sh `
