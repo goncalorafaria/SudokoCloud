@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 
 import supervisor.server.CMonitor;
+import supervisor.storage.LocalStorage;
 
 public class LoadBalancer {
 
@@ -33,15 +34,21 @@ public class LoadBalancer {
         //server.start();
         //System.out.println(server.getAddress().toString());
 
+        System.out.println("Starting the Load balancer");
+
+        LocalStorage.init();
+
         CMonitor.init();
 
-        String InstanceId = CMonitor.addNode();
 
-        System.out.println(" I'll issue a small pause; ");
+        for(int i=0;i<4;i++)
+            CMonitor.summon();
 
-        Thread.sleep(5000);
+        Thread.sleep(50000);
 
-        CMonitor.removeNode(InstanceId);
+        System.out.println(CMonitor.describe());
+
+        CMonitor.terminate();
     }
 
     static class Request {
@@ -82,8 +89,8 @@ public class LoadBalancer {
 
         public void handle(LoadBalancer.FulfilledRequest fr) throws IOException {
             
-            HttpExchange t = fr.r.tunel ;
-            JSONArray solution = fr.solution ;
+            HttpExchange t = fr.r.tunel;
+            JSONArray solution = fr.solution;
 
             Headers hdrs = t.getResponseHeaders();
             hdrs.add("Content-Type", "application/json");

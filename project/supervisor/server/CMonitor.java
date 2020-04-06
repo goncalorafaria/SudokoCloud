@@ -3,7 +3,7 @@ package supervisor.server;
 import BIT.highBIT.*;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.HashMap;
 
 import supervisor.storage.LocalStorage;
 import supervisor.storage.Storage;
@@ -18,20 +18,10 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.ec2.model.Instance;
+
 
 public class CMonitor {
-
-    static {
-
-        try{
-            CMonitor.vmstates = new LocalStorage<String>("MonitorTable");
-        }catch(Exception e){
-            System.out.println("error loading MonitorTable");
-        }
-
-        //CMonitor.init();
-                
-    }
 
     private static AmazonEC2 ec2;
     
@@ -49,7 +39,7 @@ public class CMonitor {
         {"queue_size" : "4"}
     */
 
-    public static String addNode() throws AmazonServiceException {
+    public static String summon() throws AmazonServiceException {
 
         RunInstancesRequest runInstancesRequest =
                new RunInstancesRequest();
@@ -64,19 +54,34 @@ public class CMonitor {
         RunInstancesResult runInstancesResult =
             ec2.runInstances(runInstancesRequest);
 
-        String newInstanceId = runInstancesResult
+        Instance newInstance = runInstancesResult
             .getReservation().getInstances()
-            .get(0).getInstanceId();
+            .get(0);
+
+        String newInstanceId =  newInstance.getInstanceId();
+
+
+        Map<String,String> properties = new HashMap<String,String>();
+
+        properties.put(
+                "PublicIpAddress",
+                newInstance.getPublicIpAddress()
+        );
+
+        properties.put(
+                "PrivateIpAddress",
+                newInstance.getPrivateIpAddress()
+        );
 
         CMonitor.vmstates.put(
-            newInstanceId, 
-            new ConcurrentSkipListMap<String,String>()
+                newInstanceId,
+                properties
         );
 
         return newInstanceId;
     }
 
-    public static Map<String,String> removeNode(String vmid ) throws AmazonServiceException {
+    public static Map<String,String> recall(String vmid ) throws AmazonServiceException {
 
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         
@@ -103,6 +108,28 @@ public class CMonitor {
         ec2 = AmazonEC2ClientBuilder.standard().withRegion( CMonitor.region )
         .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
 
+        try{
+            CMonitor.vmstates = new LocalStorage<String>("MonitorTable");
+        }catch(Exception e){
+            System.out.println("error loading MonitorTable");
+        }
     }
 
+    public static Map<String,String> get(String vmid){
+
+        return CMonitor.vmstates.get(vmid);
+    }
+
+    public static String describe(){
+        return CMonitor.vmstates.describe();
+    }
+
+    public static void terminate(){
+
+        for( String k: CMonitor.vmstates.keys())
+            CMonitor.recall(k);
+
+        CMonitor.vmstates.destroy();
+
+    }
 }
