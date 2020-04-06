@@ -1,9 +1,10 @@
-package pt.ulisboa.tecnico.cnv.server;
+package supervisor.server;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import org.json.JSONArray;
 import java.io.IOException;
 
 import java.io.OutputStream;
@@ -13,7 +14,8 @@ import java.net.InetSocketAddress;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
-import org.json.JSONArray;
+
+import supervisor.server.CMonitor;
 
 public class LoadBalancer {
 
@@ -28,8 +30,18 @@ public class LoadBalancer {
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.createContext("/sudoku", new RequestHandler());
         server.setExecutor(Executors.newCachedThreadPool());
-        server.start();
-        System.out.println(server.getAddress().toString());
+        //server.start();
+        //System.out.println(server.getAddress().toString());
+
+        CMonitor.init();
+
+        String InstanceId = CMonitor.addNode();
+
+        System.out.println(" I'll issue a small pause; ");
+
+        Thread.sleep(5000);
+
+        CMonitor.removeNode(InstanceId);
     }
 
     static class Request {

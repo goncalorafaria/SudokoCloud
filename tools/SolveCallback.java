@@ -2,8 +2,8 @@ import BIT.highBIT.*;
 import java.io.*;
 import java.util.*;
 
-import pt.ulisboa.tecnico.cnv.storage.LocalStorage;
-import pt.ulisboa.tecnico.cnv.storage.Storage;
+import supervisor.storage.LocalStorage;
+import supervisor.storage.Storage;
 
 public class SolveCallback {
 
@@ -43,7 +43,6 @@ public class SolveCallback {
             
             if( routine.getMethodName().contains("solveSudoku") ){
                 System.out.println(routine.getConstantPool());
-                System.out.println(routine.getConstantPool().getTag());
 
                 for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                     BasicBlock bb = (BasicBlock) b.nextElement();
