@@ -1,7 +1,6 @@
 source dependencies.sh
 
-#javac tools/ICount.java
-javac tools/StatisticsTool.java
+source compile.sh
 
 #java ICount project/pt/ulisboa/tecnico/cnv/solver/ instrumented/pt/ulisboa/tecnico/cnv/solver/ 
 java StatisticsTool -dynamic project/pt/ulisboa/tecnico/cnv/solver/ instrumented/pt/ulisboa/tecnico/cnv/solver/ 
