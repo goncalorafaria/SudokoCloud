@@ -56,7 +56,7 @@ public class LoadBalancer {
 
         //Thread.sleep(10000);
 
-        CMonitor.terminate();
+        //sCMonitor.terminate();
         // start http server.
         server.start();
 
