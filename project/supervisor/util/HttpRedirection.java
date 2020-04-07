@@ -2,18 +2,19 @@ package supervisor.util;
 
 import com.sun.net.httpserver.HttpExchange;
 
+
 import java.io.IOException;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+
 public class HttpRedirection {
 
     public static void send(HttpExchange ex, String redirectPath)
             throws IOException {
 
-        //URI base = getRequestUri(ex);
         URI path;
 
         try {
@@ -24,33 +25,17 @@ public class HttpRedirection {
 
             ex.getResponseHeaders().set("Location", path.toString());
 
-            ex.sendResponseHeaders(HttpURLConnection.HTTP_SEE_OTHER, -1);
+            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            //Required by firefox. (Super unsafe don't use in a serious project)
+
+            ex.sendResponseHeaders(307, -1);
+            // 303 does not work properly. ()
             ex.close();
 
-        }catch(URISyntaxException e){
+        } catch (URISyntaxException e) {
             Logger.log(e.toString());
             throw new IOException();
         }
     }
 
-    /*
-    private static URI getRequestUri(HttpExchange ex) {
-        String host = ex.getRequestHeaders().getFirst("Host");
-        if (host == null) {
-            int port = ex.getHttpContext().getServer().getAddress().getPort();
-            host = "localhost:" + port;
-        }
-        String protocol = (ex.getHttpContext().getServer() instanceof HttpsServer)
-                ? "https" : "http";
-        URI base;
-        try {
-            base = new URI(protocol, host, "/", null, null);
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException(e);
-        }
-        URI requestedUri = ex.getRequestURI();
-        requestedUri = base.resolve(requestedUri);
-        return requestedUri;
-    }
-    */
 }

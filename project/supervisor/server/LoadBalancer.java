@@ -40,7 +40,7 @@ public class LoadBalancer {
 
     public static void main(String[] args) throws Exception {
 
-        Logger.publish(false,true);
+        Logger.publish(true,false);
         Logger.log("Starting the Load balancer");
 
         // Load local db
@@ -60,7 +60,7 @@ public class LoadBalancer {
 
         //Thread.sleep(10000);
 
-        //CMonitor.terminate();
+        //sCMonitor.terminate();
         // start http server.
         server.start();
 
@@ -81,7 +81,7 @@ public class LoadBalancer {
 
         static class Handler implements HttpHandler {
 
-            public void handle(HttpExchange t) throws IOException {
+            public void handle(HttpExchange t) {
 
                 String query = t.getRequestURI().getQuery();
 
@@ -91,6 +91,7 @@ public class LoadBalancer {
             }
 
         }
+
     }
 
     static class Balancer extends Thread{
@@ -108,6 +109,7 @@ public class LoadBalancer {
 
                     String location = "http://" + redirectPath + ":8000/sudoku?" + r.query ;
 
+                    //String location = "http://localhost:8000/sudoku?s=BFS&un=81&n1=9&n2=9&i=SUDOKU_PUZZLE_9x9_101";
                     HttpRedirection.send(r.tunel,location);
 
                 }catch(InterruptedException e){
@@ -136,14 +138,15 @@ public class LoadBalancer {
                 );
                 Thread.sleep(100);
                 ins = CMonitor.getI();
-
             }
+
             Logger.log("Available VMs");
             for (Instance i : ins) {
                 Logger.log(i.getPublicDnsName());
                 Logger.log(i.getPublicIpAddress());
                 Logger.log(i.getPrivateIpAddress());
             }
+
             Instance i = ins.iterator().next();
 
             String result = i.getPublicDnsName();
