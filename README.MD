@@ -20,4 +20,9 @@ https://console.aws.amazon.com/iam/home?#security_credential
 
 * Executa o servidor
 
-` $ ./serve.sh `
+` $ ./server.sh `
+
+
+* Executa o load balancer
+
+` $ ./balancer.sh `
