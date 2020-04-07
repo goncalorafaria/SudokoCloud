@@ -35,13 +35,41 @@ public class CMonitor {
     private static String keyname = "CNV-lab-AWS";
     private static String securitygroups = "CNV-ssh+http";
 
-    private static Storage<String> vmstates; 
+    private static Storage<String> vmstates;
+    private static Set<String> activevms;
+    private static Map<String, Long> workload = new HashMap<>();
     /*
         vm-id -> Map<String, String> {"property": value}
 
         eg. 
         {"queue_size" : "4"}
     */
+
+    public static void init() throws AmazonClientException {
+
+        AWSCredentials credentials = null;
+
+        try {
+            credentials = new ProfileCredentialsProvider().getCredentials();
+        } catch (Exception e) {
+            throw new AmazonClientException(
+                    "Cannot load the credentials from the credential profiles file. " +
+                            "Please make sure that your credentials file is at the correct " +
+                            "location (~/.aws/credentials), and is in valid format.",
+                    e);
+        }
+
+        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CMonitor.region )
+                .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+
+        try{
+            CMonitor.vmstates = new LocalStorage<String>("VirtualMachines");
+        }catch(Exception e){
+            Logger.log("error loading MonitorTable");
+        }
+
+        CMonitor.activevms = CMonitor.vmstates.keys();
+    }
 
     public static String summon() throws AmazonServiceException {
 
@@ -81,41 +109,38 @@ public class CMonitor {
                 properties
         );
 
+        CMonitor.workload.put(
+                newInstanceId,
+                0L
+        );
+
+        CMonitor.activevms.add(newInstanceId);
+
         return newInstanceId;
     }
 
-    public static Map<String,String> recall(String vmid ) throws AmazonServiceException {
+    public static Map<String,String> schedulerecall( String vmid ){
+
+        if( CMonitor.activevms.contains(vmid) ){
+            CMonitor.activevms.remove(vmid);
+
+            Recaller worker = new Recaller(vmid);
+            worker.start();
+        }else{
+            Logger.log("This vm is not active! ");
+        }
+
+        return CMonitor.vmstates.get(vmid);
+    }
+
+    private static void recall(String vmid ) throws AmazonServiceException {
 
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         
         termInstanceReq.withInstanceIds(vmid);
         ec2.terminateInstances(termInstanceReq);
 
-        return CMonitor.vmstates.remove(vmid);
-    }
-
-    public static void init() throws AmazonClientException {
-        
-        AWSCredentials credentials = null;
-
-        try {
-            credentials = new ProfileCredentialsProvider().getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. " +
-                    "Please make sure that your credentials file is at the correct " +
-                    "location (~/.aws/credentials), and is in valid format.",
-                    e);
-        }
-
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CMonitor.region )
-        .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
-
-        try{
-            CMonitor.vmstates = new LocalStorage<String>("MonitorTable");
-        }catch(Exception e){
-            Logger.log("error loading MonitorTable");
-        }
+        CMonitor.vmstates.remove(vmid);
     }
 
     public static Map<String,String> get(String vmid){
@@ -140,45 +165,51 @@ public class CMonitor {
         return CMonitor.vmstates.keys();
     }
 
-    public static Set<Instance> getI() {
+    public static Set<Instance> getActiveInstances() {
 
         Set<Instance> instances = new HashSet<Instance>();
 
         DescribeInstancesRequest request = new DescribeInstancesRequest();
 
-            DescribeInstancesResult response = ec2.describeInstances(request);
+        DescribeInstancesResult response = ec2.describeInstances(request);
 
-            for (Reservation reservation : response.getReservations()) {
-                for (Instance instance : reservation.getInstances()) {
+        for (Reservation reservation : response.getReservations()) {
+            for (Instance instance : reservation.getInstances()) {
 
-                    if( instance.getState().getName().equals("running") )
-                        instances.add( instance );
-                }
+                if( instance.getState().getName().equals("running")
+                        && CMonitor.activevms.contains(instance.getInstanceId()) )
+                    instances.add( instance );
             }
+        }
 
         return instances;
     }
 
-}
+    static class Recaller extends Thread{
+        // waits for the server to stop serving to issue a recall
+        private String vmid;
 
-/*
-     DescribeInstancesRequest request = new DescribeInstancesRequest();
-        while(!done) {
-            DescribeInstancesResult response = ec2.describeInstances(request);
+        Recaller(String vmid){
+            this.vmid = vmid;
+        }
 
-            for(Reservation reservation : response.getReservations()) {
-                for(Instance instance : reservation.getInstances()) {
-                    System.out.printf(
-                        "Found instance with id %s, " +
-                        "AMI %s, " +
-                        "type %s, " +
-                        "state %s " +
-                        "and monitoring state %s",
-                        instance.getInstanceId(),
-                        instance.getImageId(),
-                        instance.getInstanceType(),
-                        instance.getState().getName(),
-                        instance.getMonitoring().getState());
+        @Override
+        public void run() {
+            boolean b = true;
+
+            while( b ){
+                b = ! CMonitor.vmstates.get(vmid).get("queue.size").equals("0");
+
+                try {
+                    Thread.sleep(1000); // 1 sec
+                }catch (InterruptedException e){
+                    Logger.log("Recalled Interrupted");
                 }
+
             }
- */
+
+            CMonitor.recall(vmid);
+        }
+    }
+
+}
