@@ -1,5 +1,5 @@
 ## compiler options
-#export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
+export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
 
 source dep.config
 

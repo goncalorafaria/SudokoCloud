@@ -26,7 +26,7 @@ public class HttpRedirection {
             ex.getResponseHeaders().set("Location", path.toString());
 
             ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-            //Required by firefox. (Super unsafe don't use in a serious project)
+            //Required by firefox or js. (Super unsafe don't use in a serious project)
 
             ex.sendResponseHeaders(307, -1);
             // 303 does not work properly. ()

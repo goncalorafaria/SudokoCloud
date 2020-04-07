@@ -10,7 +10,7 @@ public class SolveCallback {
     static {
 
         try{
-            SolveCallback.cloud = new LocalStorage<Integer>("test");
+            SolveCallback.cloud = new LocalStorage<Integer>("VirtualMachines");
         }catch(Exception e){
             System.out.println("error loading localstorage test");
         }

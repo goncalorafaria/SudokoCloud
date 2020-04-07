@@ -25,9 +25,10 @@ public class Logger {
 
     public static void publish(boolean terminal, boolean file){
         try {
-            writer = new PrintWriter("log.txt", "UTF-8");
+            if(file)
+                writer = new PrintWriter("log.txt", "UTF-8");
         }catch (Exception e){
-            System.out.println(e.toString());
+            System.out.println(e.toString()+ " publish method");
         }
 
         bpublish.getAndSet(true);

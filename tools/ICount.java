@@ -1,100 +1,96 @@
-	/* ICount.java
- * Sample program using BIT -- counts the number of instructions executed.
- *
- * Copyright (c) 1997, The Regents of the University of Colorado. All
- * Rights Reserved.
- * 
- * Permission to use and copy this software and its documentation for
- * NON-COMMERCIAL purposes and without fee is hereby granted provided
- * that this copyright notice appears in all copies. If you wish to use
- * or wish to have others use BIT for commercial purposes please contact,
- * Stephen V. O'Neil, Director, Office of Technology Transfer at the
- * University of Colorado at Boulder (303) 492-5647.
- */
+import BIT.highBIT.ClassInfo;
+import BIT.highBIT.Routine;
+import BIT.highBIT.BasicBlock;
+import BIT.highBIT.BasicBlockArray;
 
-import BIT.highBIT.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
 
-import supervisor.storage.LocalStorage;
-import supervisor.storage.Storage;
+import supervisor.util.Logger;
 
 public class ICount {
 
-    static {
-
-        try{
-            ICount.cloud = new LocalStorage<Integer>("test");
-        }catch(Exception e){
-            System.out.println("error loading localstorage test");
-        }
-                
-    }
-
-    private static PrintStream out = null;
-    private static int i_count = 0, b_count = 0, m_count = 0;
-    private static Storage<Integer> cloud;
+    private static Map<Long, ICount.Count> counter;
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
      */
+
+    public static void init(){
+        counter = new ConcurrentSkipListMap<>();
+    }
+
     public static void main(String argv[]) {
         File file_in = new File(argv[0]);
         String infilenames[] = file_in.list();
         
         for (int i = 0; i < infilenames.length; i++) {
             String infilename = infilenames[i];
-            if (infilename.endsWith(".class")) {
+            if (infilename.endsWith(".class") && !infilename.equals("SolverMain.class") && !infilename.contains("Parser") ) {
 				// create class info object
 				ClassInfo ci = new ClassInfo(argv[0] + System.getProperty("file.separator") + infilename);
-                
-                System.out.println(">>>>>>" + infilename + "<<<<<<<<<<<");
                 // loop through all the routines
                 // see java.util.Enumeration for more information on Enumeration class
+
+                //System.out.println(infilename);
+
                 for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
                     Routine routine = (Routine) e.nextElement();
-                    routine.addBefore("ICount", "mcount", new Integer(1));
-                    //System.out.println(routine.getMethodName());
 
-                    if( routine.getMethodName().contains("solveSudoku") ){
-                        System.out.println("Eureka");
+                    if( infilename.equals("Solver.class") && routine.getMethodName().contains("solveSudoku") ){
+
+                        routine.addBefore("ICount", "start", new Integer(1) );
+                        routine.addAfter("ICount", "end", new Integer(1) );
                     }
-                    
+
+                    routine.addBefore("ICount", "mcount", new Integer(1) );
+
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
                         bb.addBefore("ICount", "count", new Integer(bb.size()));
                     }
                 }
-                ci.addAfter("ICount", "printICount", ci.getClassName());
+
                 ci.write(argv[1] + System.getProperty("file.separator") + infilename);
             }
         }
     }
-    
-    public static synchronized void printICount(String foo) {
-        //System.out.println(Runtime.getRuntime().toString());
-        System.out.println(" Solution found in " + i_count + "-" + b_count + "-" + m_count );
-    }
-    
 
-    public static synchronized void count(int incr) {
-        i_count += incr;
-        b_count++;
-    }
-
-    public static synchronized void mcount(int incr) {
-        
-        //Map<String,Integer> tmp = new HashMap<String,Integer>();
-        m_count++;
-
-        //System.out.print(":" + m_count + ":");
-
-
-        
-        //if
-        //ICount.cloud.get().put( "method" + m_count, tmp);
-
-        //String x = Runtime.getRuntime().exec(String);
+    public static void count(int incr) {
+        counter.get(Thread.currentThread().getId()).counti(incr).countb();
 
     }
+
+    public static void end(int incr){
+        Logger.log("counts: " +  Thread.currentThread().getId() + ": " + counter.get(Thread.currentThread().getId()) );
+        counter.remove(Thread.currentThread().getId());
+    }
+    public static void start(int incr){
+        counter.put(
+                Thread.currentThread().getId(),
+                new Count()
+        );
+        Logger.log("start " +  Thread.currentThread().getId());
+    }
+
+    public static void mcount(int incr) {
+        counter.get(Thread.currentThread().getId()).countm();
+
+    }
+
+    static public class Count {
+        int i_count = 0;
+        int b_count = 0;
+        int m_count = 0;
+
+        public synchronized Count counti(int incr){ i_count += incr; return this; }
+        public synchronized Count countb(){ b_count++; return this; }
+        public synchronized Count countm(){ m_count++; return this; }
+
+        public String toString(){
+            return m_count + ":" + b_count + ":" + i_count;
+        }
+    }
+
 }
 

@@ -31,10 +31,6 @@ public class LoadBalancer {
 
     private static Balancer worker = new LoadBalancer.Balancer();
 
-    private static Map<String, HttpExchange> tunels;
-
-    private static Map<String, Set<String>> assignments = new HashMap<>();
-
     public LoadBalancer() {
     }
 
@@ -60,7 +56,7 @@ public class LoadBalancer {
 
         //Thread.sleep(10000);
 
-        //sCMonitor.terminate();
+        CMonitor.terminate();
         // start http server.
         server.start();
 
@@ -130,14 +126,14 @@ public class LoadBalancer {
 
             int size=0;
 
-            Set<Instance> ins = CMonitor.getI();
+            Set<Instance> ins = CMonitor.getActiveInstances();
 
             while( ins.size() == 0 ){
                 Logger.log(
                         "."
                 );
                 Thread.sleep(100);
-                ins = CMonitor.getI();
+                ins = CMonitor.getActiveInstances();
             }
 
             Logger.log("Available VMs");
