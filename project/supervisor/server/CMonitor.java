@@ -19,6 +19,9 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 
 
 public class CMonitor {
@@ -60,18 +63,16 @@ public class CMonitor {
 
         String newInstanceId =  newInstance.getInstanceId();
 
+        System.out.println(newInstanceId);
 
         Map<String,String> properties = new HashMap<String,String>();
 
-        properties.put(
-                "PublicIpAddress",
-                newInstance.getPublicIpAddress()
-        );
 
         properties.put(
-                "PrivateIpAddress",
-                newInstance.getPrivateIpAddress()
+                "queue.size",
+                "0"
         );
+
 
         CMonitor.vmstates.put(
                 newInstanceId,
@@ -132,4 +133,50 @@ public class CMonitor {
         CMonitor.vmstates.destroy();
 
     }
+
+    public static Set<String> keys(){
+        return CMonitor.vmstates.keys();
+    }
+
+    public static Set<Instance> getI() {
+
+        Set<Instance> instances = new HashSet<Instance>();
+
+        DescribeInstancesRequest request = new DescribeInstancesRequest();
+
+            DescribeInstancesResult response = ec2.describeInstances(request);
+
+            for (Reservation reservation : response.getReservations()) {
+                for (Instance instance : reservation.getInstances()) {
+
+                    if( instance.getState().getName().equals("running") )
+                        instances.add( instance );
+                }
+            }
+
+        return instances;
+    }
+
 }
+
+/*
+     DescribeInstancesRequest request = new DescribeInstancesRequest();
+        while(!done) {
+            DescribeInstancesResult response = ec2.describeInstances(request);
+
+            for(Reservation reservation : response.getReservations()) {
+                for(Instance instance : reservation.getInstances()) {
+                    System.out.printf(
+                        "Found instance with id %s, " +
+                        "AMI %s, " +
+                        "type %s, " +
+                        "state %s " +
+                        "and monitoring state %s",
+                        instance.getInstanceId(),
+                        instance.getImageId(),
+                        instance.getInstanceType(),
+                        instance.getState().getName(),
+                        instance.getMonitoring().getState());
+                }
+            }
+ */
