@@ -1,47 +1,69 @@
 package supervisor.server;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import org.json.JSONArray;
 import java.io.IOException;
 
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
+import java.util.HashMap;
+import java.util.Map;
 
-import supervisor.server.CMonitor;
+import java.util.Set;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import supervisor.storage.LocalStorage;
+import supervisor.util.HttpRedirection;
+import supervisor.util.Logger;
+
+import com.amazonaws.services.ec2.model.Instance;
+
 
 public class LoadBalancer {
 
-    private static Queue<Request> inqueue = new ConcurrentLinkedQueue<>();
+    private static LinkedBlockingQueue<Request> inqueue = new LinkedBlockingQueue<>();
 
-    private static Queue<LoadBalancer.FulfilledRequest> outqueue = new ConcurrentLinkedQueue<>();
+    private static AtomicBoolean active = new AtomicBoolean(true);
+
+    private static Balancer worker = new LoadBalancer.Balancer();
+
+    private static Map<String, HttpExchange> tunels;
+
+    private static Map<String, Set<String>> assignments = new HashMap<>();
 
     public LoadBalancer() {
     }
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-        server.createContext("/sudoku", new RequestHandler());
-        server.setExecutor(Executors.newCachedThreadPool());
-        //server.start();
-        //System.out.println(server.getAddress().toString());
 
+        Logger.publish(false,true);
+        Logger.log("Starting the Load balancer");
+
+        // Load local db
+        LocalStorage.init();
+
+        // Connect to aws
         CMonitor.init();
 
-        String InstanceId = CMonitor.addNode();
+        // start redirection thread
+        worker.start();
 
-        System.out.println(" I'll issue a small pause; ");
+        //CMonitor.summon();
 
-        Thread.sleep(5000);
+        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        server.createContext("/sudoku", new Request.Handler());
+        server.setExecutor(Executors.newCachedThreadPool());
 
-        CMonitor.removeNode(InstanceId);
+        //Thread.sleep(10000);
+
+        //CMonitor.terminate();
+        // start http server.
+        server.start();
+
     }
 
     static class Request {
@@ -52,56 +74,81 @@ public class LoadBalancer {
             this.query = query;
             this.tunel = t;
         }
-    }
 
-    static class FulfilledRequest{
-        
-        Request r;
-        JSONArray solution;
-
-        FulfilledRequest(Request r, JSONArray solution){
-            this.r = r;
-            this.solution = solution;
+        public String toString(){
+            return this.query + "\n" + this.tunel.toString();
         }
-    }
 
-    static class RequestHandler implements HttpHandler {
+        static class Handler implements HttpHandler {
 
-        public void handle(HttpExchange t) throws IOException {
-            
-            String query = t.getRequestURI().getQuery();
+            public void handle(HttpExchange t) throws IOException {
 
-            LoadBalancer.inqueue.add(
-                new LoadBalancer.Request(query,t)
+                String query = t.getRequestURI().getQuery();
+
+                LoadBalancer.inqueue.add(
+                        new LoadBalancer.Request(query,t)
                 );
-        }
-
-    }
-
-    static class ResponseHandler {
-
-        public void handle(LoadBalancer.FulfilledRequest fr) throws IOException {
-            
-            HttpExchange t = fr.r.tunel ;
-            JSONArray solution = fr.solution ;
-
-            Headers hdrs = t.getResponseHeaders();
-            hdrs.add("Content-Type", "application/json");
-            hdrs.add("Access-Control-Allow-Origin", "*");
-            hdrs.add("Access-Control-Allow-Credentials", "true");
-            hdrs.add("Access-Control-Allow-Methods", "POST, GET, HEAD, OPTIONS");
-            hdrs.add("Access-Control-Allow-Headers", "Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
-            t.sendResponseHeaders(200, (long)solution.toString().length());
-            OutputStream os = t.getResponseBody();
-            OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
-            osw.write(solution.toString());
-            osw.flush();
-            osw.close();
-            os.close();
-            System.out.println("> Sent response to " + t.getRemoteAddress().toString());
+            }
 
         }
-
     }
 
+    static class Balancer extends Thread{
+
+        public Balancer(){
+        }
+
+        @Override
+        public void run() {
+
+            while ( LoadBalancer.active.get() ) {
+                try {
+                    Request r = LoadBalancer.inqueue.take();
+                    String redirectPath = this.decide(r);
+
+                    String location = "http://" + redirectPath + ":8000/sudoku?" + r.query ;
+
+                    HttpRedirection.send(r.tunel,location);
+
+                }catch(InterruptedException e){
+                    Logger.log(e.toString());
+                    return;
+                }catch(IOException e){
+                    Logger.log(e.toString());
+                    return;
+                }
+            }
+
+        }
+
+        private String decide(Request r) throws InterruptedException{
+            Logger.log("This code Delivers the task to the servers");
+            Logger.log(r.toString());
+            Logger.log("#####");
+
+            int size=0;
+
+            Set<Instance> ins = CMonitor.getI();
+
+            while( ins.size() == 0 ){
+                Logger.log(
+                        "."
+                );
+                Thread.sleep(100);
+                ins = CMonitor.getI();
+
+            }
+            Logger.log("Available VMs");
+            for (Instance i : ins) {
+                Logger.log(i.getPublicDnsName());
+                Logger.log(i.getPublicIpAddress());
+                Logger.log(i.getPrivateIpAddress());
+            }
+            Instance i = ins.iterator().next();
+
+            String result = i.getPublicDnsName();
+
+            return result;
+        }
+    }
 }
