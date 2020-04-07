@@ -4,12 +4,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import supervisor.storage.Storage;
+import supervisor.util.Logger;
 
 public class LocalStorage<V> implements Storage<V> {
 
@@ -25,11 +24,9 @@ public class LocalStorage<V> implements Storage<V> {
             ois.close();
         }
         catch (Exception e) {
-            System.out.println("#######################");
-            System.out.println(e.toString());
-            System.out.println("#######################");
             LocalStorage.database =
                     new ConcurrentSkipListMap<String,Map>();
+            Logger.log("Create db file ");
         }
     }
 
@@ -65,8 +62,7 @@ public class LocalStorage<V> implements Storage<V> {
             oos.writeObject(LocalStorage.database);
             oos.close();
         } catch (Exception e) {
-            System.out.println(e.toString());
-            e.printStackTrace();
+            Logger.log(e.toString());
         }
     }
 

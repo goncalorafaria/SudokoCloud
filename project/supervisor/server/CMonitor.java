@@ -1,12 +1,13 @@
 package supervisor.server;
 
 import BIT.highBIT.*;
-import java.io.*;
+
 import java.util.*;
 import java.util.HashMap;
 
 import supervisor.storage.LocalStorage;
 import supervisor.storage.Storage;
+import supervisor.util.Logger;
 
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
@@ -63,7 +64,8 @@ public class CMonitor {
 
         String newInstanceId =  newInstance.getInstanceId();
 
-        System.out.println(newInstanceId);
+        Logger.log("New Instanceid: ");
+        Logger.log(newInstanceId);
 
         Map<String,String> properties = new HashMap<String,String>();
 
@@ -112,7 +114,7 @@ public class CMonitor {
         try{
             CMonitor.vmstates = new LocalStorage<String>("MonitorTable");
         }catch(Exception e){
-            System.out.println("error loading MonitorTable");
+            Logger.log("error loading MonitorTable");
         }
     }
 

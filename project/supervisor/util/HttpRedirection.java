@@ -1,7 +1,6 @@
 package supervisor.util;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpsServer;
 
 import java.io.IOException;
 
@@ -14,31 +13,27 @@ public class HttpRedirection {
     public static void send(HttpExchange ex, String redirectPath)
             throws IOException {
 
-        URI base = getRequestUri(ex);
+        //URI base = getRequestUri(ex);
         URI path;
 
         try {
             path = new URI(redirectPath);
 
-            URI location = base.resolve(path);
+            Logger.log("Redirection path");
+            Logger.log(path.toString());
 
-            System.out.println(base.toString());
-            System.out.println(path.toString());
-            System.out.println(location.toString());
-
-            System.out.println(ex.getResponseHeaders().toString());
-
-            ex.getResponseHeaders().set("Location", location.toString());
+            ex.getResponseHeaders().set("Location", path.toString());
 
             ex.sendResponseHeaders(HttpURLConnection.HTTP_SEE_OTHER, -1);
             ex.close();
 
         }catch(URISyntaxException e){
-            System.out.println(e.toString());
+            Logger.log(e.toString());
             throw new IOException();
         }
     }
 
+    /*
     private static URI getRequestUri(HttpExchange ex) {
         String host = ex.getRequestHeaders().getFirst("Host");
         if (host == null) {
@@ -57,5 +52,5 @@ public class HttpRedirection {
         requestedUri = base.resolve(requestedUri);
         return requestedUri;
     }
-
+    */
 }

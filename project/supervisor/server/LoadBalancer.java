@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import supervisor.storage.LocalStorage;
 import supervisor.util.HttpRedirection;
+import supervisor.util.Logger;
 
 import com.amazonaws.services.ec2.model.Instance;
 
@@ -38,11 +39,9 @@ public class LoadBalancer {
     }
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-        server.createContext("/sudoku", new Request.Handler());
-        server.setExecutor(Executors.newCachedThreadPool());
 
-        System.out.println("Starting the Load balancer");
+        Logger.publish(false,true);
+        Logger.log("Starting the Load balancer");
 
         // Load local db
         LocalStorage.init();
@@ -55,9 +54,13 @@ public class LoadBalancer {
 
         //CMonitor.summon();
 
+        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+        server.createContext("/sudoku", new Request.Handler());
+        server.setExecutor(Executors.newCachedThreadPool());
+
         //Thread.sleep(10000);
-        //System.out.println("Ready to work");
-        CMonitor.terminate();
+
+        //CMonitor.terminate();
         // start http server.
         server.start();
 
@@ -103,13 +106,15 @@ public class LoadBalancer {
                     Request r = LoadBalancer.inqueue.take();
                     String redirectPath = this.decide(r);
 
-                    HttpRedirection.send(r.tunel,redirectPath);
+                    String location = "http://" + redirectPath + ":8000/sudoku?" + r.query ;
+
+                    HttpRedirection.send(r.tunel,location);
 
                 }catch(InterruptedException e){
-                    System.out.println(e.toString());
+                    Logger.log(e.toString());
                     return;
                 }catch(IOException e){
-                    System.out.println(e.toString());
+                    Logger.log(e.toString());
                     return;
                 }
             }
@@ -117,36 +122,33 @@ public class LoadBalancer {
         }
 
         private String decide(Request r) throws InterruptedException{
-            System.out.println("This code Delivers the task to the servers");
-            System.out.println(r.toString());
-            //String vmid = CMonitor.keys().iterator().next();
-
-            //System.out.println(vmid);
-            //System.out.println(CMonitor.get(vmid).toString());
-            //"PublicDnsAddress"
-            System.out.println("#####");
+            Logger.log("This code Delivers the task to the servers");
+            Logger.log(r.toString());
+            Logger.log("#####");
 
             int size=0;
 
             Set<Instance> ins = CMonitor.getI();
 
             while( ins.size() == 0 ){
-                System.out.print(
+                Logger.log(
                         "."
                 );
                 Thread.sleep(100);
                 ins = CMonitor.getI();
 
             }
-
+            Logger.log("Available VMs");
             for (Instance i : ins) {
-                System.out.println(i.getPublicDnsName());
-                System.out.println(i.getPublicIpAddress());
-                System.out.println(i.getPrivateIpAddress());
+                Logger.log(i.getPublicDnsName());
+                Logger.log(i.getPublicIpAddress());
+                Logger.log(i.getPrivateIpAddress());
             }
+            Instance i = ins.iterator().next();
 
+            String result = i.getPublicDnsName();
 
-            return ins.iterator().next().getPublicDnsName();
+            return result;
         }
     }
 }
