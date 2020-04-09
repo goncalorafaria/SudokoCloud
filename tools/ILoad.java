@@ -1,10 +1,16 @@
 import BIT.highBIT.ClassInfo;
 
+import supervisor.server.CNode;
 import supervisor.util.Logger;
 
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
+
+/*
+* This class instruments SolverMain and WebServer.
+* Suck that when they start supervisor code is iniciated.
+* */
 
 public class ILoad {
 
@@ -25,10 +31,6 @@ public class ILoad {
                             "ILoad",
                             "start",
                             new Integer(1));
-                    routine.addBefore(
-                        "ICount",
-                        "start",
-                        new Integer(1));
 
             }
 
@@ -40,8 +42,9 @@ public class ILoad {
     }
 
     public static void start(int incr){
-        Logger.publish(false,true);
-        ICount.init();
+        Logger.publish(true,true);
+        CNode.init();
+        //ICount.init();
         Logger.log("start");
     }
 

@@ -6,18 +6,27 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import supervisor.storage.LocalStorage;
 import supervisor.util.Logger;
 
-import java.util.HashMap;
+
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class CNode {
 
     private static AmazonEC2 ec2;
 
-    private static Map< Long, Task > activetasks = new ConcurrentSkipListMap<>();
+    private static Map< Long, Task > activetasks
+            = new ConcurrentSkipListMap<>();
+
+    private static Map<String, BlockingQueue<Task>> oldtasks
+            = new ConcurrentSkipListMap<>();
+
+    private static BlockingQueue<String> keyq = new LinkedBlockingQueue();
 
     public static void init() throws AmazonClientException {
 
@@ -39,6 +48,36 @@ public class CNode {
     }
 
     public static void registerTask(String taskkey){
-        activetasks.put(Thread.currentThread().getId(), new Task(taskkey) );
+        Logger.log("Registering task:" + taskkey);
+
+        Task t = new Task(taskkey);
+        t.addMetric("Count",new Count());
+
+        activetasks.put(Thread.currentThread().getId(), t );
+
+
+        if( !oldtasks.containsKey(t.getKey()) )
+            oldtasks.put(t.getKey(), new LinkedBlockingQueue());
+
+        Logger.log("start " +  Thread.currentThread().getId());
+    }
+
+    public static void finishTask(){
+
+        Long tid = Thread.currentThread().getId();
+        Task t = activetasks.remove(tid);
+
+        Logger.log("Finish task:" + t.getKey());
+
+        keyq.add(t.getKey());
+
+        oldtasks.get(t.getKey()).add(t);
+
+    }
+
+
+
+    public static Task getTask(){
+        return activetasks.get(Thread.currentThread().getId());
     }
 }
