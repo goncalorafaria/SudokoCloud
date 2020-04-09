@@ -28,8 +28,7 @@ import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 public class CMonitor {
 
     private static AmazonEC2 ec2;
-    
-    private static String region = "eu-west-2";
+
     private static String imageid = "ami-0cb790308f7591fa6";
     private static String instancetype = "t2.micro";
     private static String keyname = "CNV-lab-AWS";
@@ -59,7 +58,7 @@ public class CMonitor {
                     e);
         }
 
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CMonitor.region )
+        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CloudStandart.region )
                 .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
 
         try{

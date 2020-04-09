@@ -105,7 +105,6 @@ public class LoadBalancer {
 
                     String location = "http://" + redirectPath + ":8000/sudoku?" + r.query ;
 
-                    //String location = "http://localhost:8000/sudoku?s=BFS&un=81&n1=9&n2=9&i=SUDOKU_PUZZLE_9x9_101";
                     HttpRedirection.send(r.tunel,location);
 
                 }catch(InterruptedException e){
