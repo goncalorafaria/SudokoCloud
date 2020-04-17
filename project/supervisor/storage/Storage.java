@@ -13,4 +13,5 @@ public interface Storage<Item> {
     void destroy();
     Map<String,Item> get(String key);
     Set<String> keys();
+    /* It needs a way for updating metric Values withou concorrency issues. */
 }

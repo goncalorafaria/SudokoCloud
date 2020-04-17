@@ -12,10 +12,7 @@ https://console.aws.amazon.com/iam/home?#security_credential
 
 * chmod 755 aos ficheiro *.sh
 
-## Execution.
-
-
-
+## Execution
 
 *  Executa o program em C para calcular tempos de vários parametros de execução e coleciona o resultados de instrumentação
 

@@ -6,8 +6,9 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
+import supervisor.storage.LocalStorage;
+import supervisor.storage.Storage;
 import supervisor.util.Logger;
-
 
 import java.util.Map;
 import java.util.Queue;
@@ -33,6 +34,8 @@ public class CNode {
     private static BlockingQueue<String> keyq = new LinkedBlockingQueue();
     /* Fila de espera para publicar as metricas das tasks terminadas */
 
+    private static Storage<String> requestTable;
+
     public static void init() throws AmazonClientException {
 
         AWSCredentials credentials = null;
@@ -49,6 +52,12 @@ public class CNode {
 
         ec2 = AmazonEC2ClientBuilder.standard().withRegion( CloudStandart.region )
                 .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+
+        try{
+            CNode.requestTable = new LocalStorage<String>("RequestTable");
+        }catch(Exception e){
+            Logger.log("error loading RequestTable");
+        }
 
     }
 
@@ -82,7 +91,6 @@ public class CNode {
         Logger.log("(Metrics):" + t.getMetric("Count"));
 
     }
-
 
 
     public static Task getTask(){
