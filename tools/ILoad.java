@@ -9,7 +9,7 @@ import java.util.Set;
 
 /*
 * This class instruments SolverMain and WebServer.
-* Suck that when they start supervisor code is iniciated.
+* Loads auxiliary strucutres and Amazon connection.
 * */
 
 public class ILoad {

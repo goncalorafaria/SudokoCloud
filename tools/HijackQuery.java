@@ -6,6 +6,9 @@ import BIT.highBIT.*;
 import java.util.Enumeration;
 
 public class HijackQuery {
+    /*
+    * Esta classe trata de instrumentar o servidor para intercetar a receção do pedido.
+    * */
     public static void main(String argv[]) {
         
         String infilename = "project/pt/ulisboa/tecnico/cnv/util/AbstractArgumentParser.class";

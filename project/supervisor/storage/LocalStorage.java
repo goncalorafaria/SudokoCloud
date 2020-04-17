@@ -11,7 +11,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import supervisor.util.Logger;
 
 public class LocalStorage<V> implements Storage<V> {
-
+    /**
+     * Implementação de uma tabela através de um ficheiro.
+     * */
     private static Map<String, Map> database;
     private static String dbfile = "bin/Storage.db";
     private String tablename;

@@ -17,16 +17,21 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class CNode {
-
+    /*
+    *  This is the Server Hypervisor class.
+    * */
     private static AmazonEC2 ec2;
 
     private static Map< Long, Task > activetasks
             = new ConcurrentSkipListMap<>();
+    /* tasks que estão a decorrer */
 
     private static Map<String, BlockingQueue<Task>> oldtasks
             = new ConcurrentSkipListMap<>();
+    /* tasks que têm de se ter as metricas publicadas para a db.*/
 
     private static BlockingQueue<String> keyq = new LinkedBlockingQueue();
+    /* Fila de espera para publicar as metricas das tasks terminadas */
 
     public static void init() throws AmazonClientException {
 
@@ -47,6 +52,7 @@ public class CNode {
 
     }
 
+    /* Associa um novo pedido a um thread. */
     public static void registerTask(String taskkey){
         Logger.log("Registering task:" + taskkey);
 
@@ -69,9 +75,11 @@ public class CNode {
 
         Logger.log("Finish task:" + t.getKey());
 
-        keyq.add(t.getKey());
-
         oldtasks.get(t.getKey()).add(t);
+        keyq.add(t.getKey());/* shedule for publishing*/
+
+        Logger.log("(Explain):" + ((Count)t.getMetric("Count")).explain());
+        Logger.log("(Metrics):" + t.getMetric("Count"));
 
     }
 

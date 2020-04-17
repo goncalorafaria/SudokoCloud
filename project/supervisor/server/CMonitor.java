@@ -26,23 +26,27 @@ import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 
 
 public class CMonitor {
+    /*
+     *  This is the Hypervisor class for the balancer.
+     * */
 
     private static AmazonEC2 ec2;
 
     private static String imageid = "ami-0cb790308f7591fa6";
+    private static String collectorimageid = "ami-0cb790308f7591fa6";
+
     private static String instancetype = "t2.micro";
     private static String keyname = "CNV-lab-AWS";
     private static String securitygroups = "CNV-ssh+http";
 
     private static Storage<String> vmstates;
-    private static Set<String> activevms;
-    private static Map<String, Long> workload = new HashMap<>();
-    /*
-        vm-id -> Map<String, String> {"property": value}
+    /* Storage persistente que guarda as máquinas virtuais e as suas propriedades(ip, queue size etc)*/
 
-        eg. 
-        {"queue_size" : "4"}
-    */
+    private static Set<String> activevms;
+    /* Storage local que guarda as máquinas virtuais que estão a prontas a receber pedidos. */
+
+    private static Map<String, Long> workload = new HashMap<>();
+    /* Storage local com a estimativa da carga de cada vm. (desde a ultima atualização) */
 
     public static void init() throws AmazonClientException {
 
@@ -70,6 +74,7 @@ public class CMonitor {
         CMonitor.activevms = CMonitor.vmstates.keys();
     }
 
+    /* Cria uma nova VM */
     public static String summon() throws AmazonServiceException {
 
         RunInstancesRequest runInstancesRequest =
@@ -96,12 +101,10 @@ public class CMonitor {
 
         Map<String,String> properties = new HashMap<String,String>();
 
-
         properties.put(
                 "queue.size",
                 "0"
         );
-
 
         CMonitor.vmstates.put(
                 newInstanceId,
@@ -118,6 +121,7 @@ public class CMonitor {
         return newInstanceId;
     }
 
+    /* Desliga uma VM assim que esta acabar de servir. */
     public static Map<String,String> schedulerecall( String vmid ){
 
         if( CMonitor.activevms.contains(vmid) ){
@@ -132,6 +136,7 @@ public class CMonitor {
         return CMonitor.vmstates.get(vmid);
     }
 
+    /* Termina imediatamente uma Máquina Virtual - Inseguro */
     private static void recall(String vmid ) throws AmazonServiceException {
 
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
@@ -140,6 +145,7 @@ public class CMonitor {
         ec2.terminateInstances(termInstanceReq);
 
         CMonitor.vmstates.remove(vmid);
+        CMonitor.workload.remove(vmid);
     }
 
     public static Map<String,String> get(String vmid){
@@ -151,6 +157,7 @@ public class CMonitor {
         return CMonitor.vmstates.describe();
     }
 
+    /* TODO: Remover as restantes estruturas. */
     public static void terminate(){
 
         for( String k: CMonitor.vmstates.keys())
@@ -164,6 +171,7 @@ public class CMonitor {
         return CMonitor.vmstates.keys();
     }
 
+    /* Obtêm a listagem de VM ATIVAS */
     public static Set<Instance> getActiveInstances() {
 
         Set<Instance> instances = new HashSet<Instance>();

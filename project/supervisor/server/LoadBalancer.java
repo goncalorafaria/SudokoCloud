@@ -25,10 +25,14 @@ import com.amazonaws.services.ec2.model.Instance;
 
 public class LoadBalancer {
 
+
+    /* Fila de pedidos http */
     private static LinkedBlockingQueue<Request> inqueue = new LinkedBlockingQueue<>();
 
+    /* thread workers state */
     private static AtomicBoolean active = new AtomicBoolean(true);
 
+    /* Workers : Idealmente seria um Set. */
     private static Balancer worker = new LoadBalancer.Balancer();
 
     public LoadBalancer() {
@@ -118,6 +122,9 @@ public class LoadBalancer {
 
         }
 
+        /*
+        * Função que toma a decisão de encaminhamento do pedido.
+        * */
         private String decide(Request r) throws InterruptedException{
             Logger.log("This code Delivers the task to the servers");
             Logger.log(r.toString());
