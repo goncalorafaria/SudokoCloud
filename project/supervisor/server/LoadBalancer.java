@@ -7,17 +7,13 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-
 import java.util.Set;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import sun.rmi.runtime.Log;
+
 import supervisor.storage.LocalStorage;
 import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
@@ -55,7 +51,7 @@ public class LoadBalancer {
             // start redirection thread
             worker.start();
 
-            CMonitor.summon();
+            //CMonitor.summon();
 
             HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
             server.createContext("/sudoku", new Request.Handler());
@@ -63,7 +59,7 @@ public class LoadBalancer {
 
             //Thread.sleep(10000);
 
-            //CMonitor.terminate();
+            CMonitor.terminate();
             // start http server.
             server.start();
         }catch (Exception e ){

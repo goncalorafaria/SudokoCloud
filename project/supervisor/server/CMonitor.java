@@ -305,9 +305,6 @@ public class CMonitor {
             }
         }
 
-
-
-
         @Override
         public void run() {
 

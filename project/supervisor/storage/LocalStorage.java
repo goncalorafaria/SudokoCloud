@@ -78,6 +78,12 @@ public class LocalStorage<V> implements Storage<V> {
 
         return r;
     }
+
+    public boolean contains(String key){
+
+        return database.
+                get(this.tablename).containsKey(key);
+    }
     
     public void destroy(){
         database.remove(this.tablename);

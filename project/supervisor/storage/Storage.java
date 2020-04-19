@@ -13,5 +13,6 @@ public interface Storage<Item> {
     void destroy();
     Map<String,Item> get(String key);
     Set<String> keys();
+    boolean contains(String key);
     /* It needs a way for updating metric Values withou concorrency issues. */
 }

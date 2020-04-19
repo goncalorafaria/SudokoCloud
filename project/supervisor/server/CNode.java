@@ -8,14 +8,18 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import supervisor.storage.LocalStorage;
 import supervisor.storage.Storage;
+import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CNode {
     /*
@@ -27,7 +31,7 @@ public class CNode {
             = new ConcurrentSkipListMap<>();
     /* tasks que estão a decorrer */
 
-    private static Map<String, BlockingQueue<Task>> oldtasks
+    private static Map<String, Task.Group > oldtasks
             = new ConcurrentSkipListMap<>();
     /* tasks que têm de se ter as metricas publicadas para a db.*/
 
@@ -35,6 +39,8 @@ public class CNode {
     /* Fila de espera para publicar as metricas das tasks terminadas */
 
     private static Storage<String> requestTable;
+
+    private static Publisher worker;// thread that publishes the collected metrics.
 
     public static void init() throws AmazonClientException {
 
@@ -57,7 +63,11 @@ public class CNode {
             CNode.requestTable = new LocalStorage<String>("RequestTable");
         }catch(Exception e){
             Logger.log("error loading RequestTable");
+            Logger.log(e.toString());
         }
+
+        CNode.worker = new Publisher();
+        CNode.worker.start();
 
     }
 
@@ -72,7 +82,7 @@ public class CNode {
 
 
         if( !oldtasks.containsKey(t.getKey()) )
-            oldtasks.put(t.getKey(), new LinkedBlockingQueue());
+            oldtasks.put(t.getKey(), new Task.Group());
 
         Logger.log("start " +  Thread.currentThread().getId());
     }
@@ -92,8 +102,62 @@ public class CNode {
 
     }
 
-
     public static Task getTask(){
         return activetasks.get(Thread.currentThread().getId());
     }
+
+    public static void terminate(){
+        Publisher.off();
+    }
+
+    static class Publisher extends Thread {
+
+        private static AtomicBoolean active = new AtomicBoolean(true);
+
+        public static void off(){
+            active.getAndSet(false);
+        }
+
+        @Override
+        public void run() {
+
+            while( active.get() ){
+
+                try {
+                    Logger.log("Publisher:Halt");
+                    String tsk = CNode.keyq.take();
+                    Logger.log("Publisher:Working");
+                    Set<Task> taskr = new HashSet<>();
+                    oldtasks.get(tsk).drainTo(taskr);
+
+                    Set<Metric> mpub = Task.condense(taskr);
+                    Map<String,String> row;
+
+                    if( mpub.size() > 0 ){
+
+                        Count c = (Count) mpub.iterator().next();
+                        if( requestTable.contains(tsk)){
+                            row = requestTable.get(tsk);
+                            Count cold = Count.fromString(row.get("Count"));
+                            c.aggregate(cold);
+                        }else{
+                            row = new HashMap<>();
+                        }
+                        row.put("Count",c.toBinary());
+                        requestTable.put(tsk, row);
+
+                    }
+
+                }catch(InterruptedException e){
+                    Logger.log(e.getMessage());
+                }catch (IOException e){
+                    Logger.log(e.getMessage());
+                }catch (ClassNotFoundException e){
+                    Logger.log(e.getMessage());
+                }
+            }
+
+        }
+    }
+
 }
