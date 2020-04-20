@@ -1,29 +1,51 @@
-import BIT.highBIT.ClassInfo;
-import BIT.highBIT.Routine;
-import BIT.highBIT.BasicBlock;
-import BIT.highBIT.BasicBlockArray;
+import BIT.highBIT.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
 
-import supervisor.util.Logger;
+import supervisor.server.CNode;
+import supervisor.server.Count;
 
 public class ICount {
+    /*
+     * Instruments metric collection.
+     * */
 
-    private static Map<Long, ICount.Count> counter;
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
      */
 
-    public static void init(){
-        counter = new ConcurrentSkipListMap<>();
-    }
+    private static boolean overhead = false;
 
     public static void main(String argv[]) {
         File file_in = new File(argv[0]);
         String infilenames[] = file_in.list();
-        
+        boolean[] tr = new boolean[4];
+
+        if( argv.length > 2 ){
+
+            if( argv.length == 3 )
+                overhead = Boolean.parseBoolean(argv[2]);
+
+            if( overhead ){
+                tr[0]=false;
+                tr[1]=false;
+                tr[2]=false;
+                tr[3]=false;
+            }else{
+                tr[0] = Integer.parseInt(argv[2])==1;// instructions
+                tr[1] = Integer.parseInt(argv[3])==1;// methods
+                tr[2] = Integer.parseInt(argv[4])==1;// loops
+                tr[3] = Integer.parseInt(argv[5])==1;// inc
+            }
+
+        }else{
+            tr[0]=true;
+            tr[1]=true;
+            tr[2]=true;
+            tr[3]=true;
+        }
+
         for (int i = 0; i < infilenames.length; i++) {
             String infilename = infilenames[i];
             if (infilename.endsWith(".class") && !infilename.equals("SolverMain.class") && !infilename.contains("Parser") ) {
@@ -36,18 +58,41 @@ public class ICount {
 
                 for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
                     Routine routine = (Routine) e.nextElement();
-
-                    if( infilename.equals("Solver.class") && routine.getMethodName().contains("solveSudoku") ){
-
-                        routine.addBefore("ICount", "start", new Integer(1) );
-                        routine.addAfter("ICount", "end", new Integer(1) );
-                    }
-
-                    routine.addBefore("ICount", "mcount", new Integer(1) );
+                    if(tr[1])
+                        routine.addBefore("ICount", "mcount", new Integer(1) );
 
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
-                        bb.addBefore("ICount", "count", new Integer(bb.size()));
+
+                        if(overhead)
+                            bb.addBefore("ICount", "countover", new Integer(bb.size()));
+
+                        if(tr[0])
+                            bb.addBefore("ICount", "count", new Integer(bb.size()));
+
+                        if( tr[2] ) {
+                            Instruction[] instructions = routine.getInstructions();
+                            Instruction instr = instructions[bb.getEndAddress()];
+                            short instr_type = InstructionTable.InstructionTypeTable[instr.getOpcode()];
+
+                            if (instr_type == InstructionTable.CONDITIONAL_INSTRUCTION)
+                                instr.addBefore("ICount", "CheckIncrement", "BranchOutcome");
+                        }
+
+                        if( tr[3] ){
+                            //search for iinc.
+                            Instruction[] instructions = routine.getInstructions();
+                            for( int j = 0; j < instructions.length; j++){
+                                if( instructions[j].getOpcode() == InstructionTable.iinc ){
+                                    instructions[j].addBefore("ICount", "countinc", 1);
+                                }
+
+                                short instr_type = InstructionTable.InstructionTypeTable[instructions[j].getOpcode()];
+
+                                //if( instr_type == InstructionTable.STORE_INSTRUCTION )
+                                 //   instructions[j].addBefore("ICount","counts",1);
+                            }
+                        }
                     }
                 }
 
@@ -56,39 +101,30 @@ public class ICount {
         }
     }
 
+    public static void countinc(int incr) {
+        Count c = (Count)CNode.getTask().getMetric("Count");
+        c.countinc();
+    }
+
     public static void count(int incr) {
-        counter.get(Thread.currentThread().getId()).counti(incr).countb();
-
+        Count c = (Count)CNode.getTask().getMetric("Count");
+        c.counti(incr).countb();
     }
 
-    public static void end(int incr){
-        Logger.log("counts: " +  Thread.currentThread().getId() + ": " + counter.get(Thread.currentThread().getId()) );
-        counter.remove(Thread.currentThread().getId());
-    }
-    public static void start(int incr){
-        counter.put(
-                Thread.currentThread().getId(),
-                new Count()
-        );
-        Logger.log("start " +  Thread.currentThread().getId());
+    public static void countover(int incr) {
+        Count c = (Count)CNode.getTask().getMetric("Overhead");
+        c.counti(incr);
     }
 
     public static void mcount(int incr) {
-        counter.get(Thread.currentThread().getId()).countm();
-
+        Count c = (Count)CNode.getTask().getMetric("Count");
+        c.countm();
     }
 
-    static public class Count {
-        int i_count = 0;
-        int b_count = 0;
-        int m_count = 0;
-
-        public synchronized Count counti(int incr){ i_count += incr; return this; }
-        public synchronized Count countb(){ b_count++; return this; }
-        public synchronized Count countm(){ m_count++; return this; }
-
-        public String toString(){
-            return m_count + ":" + b_count + ":" + i_count;
+    public static void CheckIncrement(int brOutcome) {
+        if (brOutcome == 0) {// nova iteracao
+            Count c = (Count)CNode.getTask().getMetric("Count");
+            c.countBranch();
         }
     }
 

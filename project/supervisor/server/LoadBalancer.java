@@ -7,9 +7,6 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import java.util.Set;
 
 import java.util.concurrent.Executors;
@@ -20,15 +17,15 @@ import supervisor.storage.LocalStorage;
 import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
 
-import com.amazonaws.services.ec2.model.Instance;
-
-
 public class LoadBalancer {
 
+    /* Fila de pedidos http */
     private static LinkedBlockingQueue<Request> inqueue = new LinkedBlockingQueue<>();
 
+    /* thread workers state */
     private static AtomicBoolean active = new AtomicBoolean(true);
 
+    /* Workers : Idealmente seria um Set. */
     private static Balancer worker = new LoadBalancer.Balancer();
 
     public LoadBalancer() {
@@ -36,29 +33,34 @@ public class LoadBalancer {
 
     public static void main(String[] args) throws Exception {
 
-        Logger.publish(true,false);
-        Logger.log("Starting the Load balancer");
+        try {
+            Logger.publish(true, false);
+            Logger.log("Starting the Load balancer");
 
-        // Load local db
-        LocalStorage.init();
+            // Load local db
+            LocalStorage.init();
 
-        // Connect to aws
-        CMonitor.init();
+            // Connect to aws
+            CMonitor.init();
 
-        // start redirection thread
-        worker.start();
+            // start redirection thread
+            worker.start();
 
-        //CMonitor.summon();
+            CMonitor.summon();
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-        server.createContext("/sudoku", new Request.Handler());
-        server.setExecutor(Executors.newCachedThreadPool());
+            HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+            server.createContext("/sudoku", new Request.Handler());
+            server.setExecutor(Executors.newCachedThreadPool());
 
-        //Thread.sleep(10000);
+            //Thread.sleep(10000);
 
-        //sCMonitor.terminate();
-        // start http server.
-        server.start();
+            //CMonitor.terminate();
+            // start http server.
+            server.start();
+        }catch (Exception e ){
+            Logger.log("Terminating VMS" + e.toString());
+            //CMonitor.terminate();
+        }
 
     }
 
@@ -97,10 +99,11 @@ public class LoadBalancer {
 
         @Override
         public void run() {
+            Request r=null;
 
             while ( LoadBalancer.active.get() ) {
                 try {
-                    Request r = LoadBalancer.inqueue.take();
+                    r = LoadBalancer.inqueue.take();
                     String redirectPath = this.decide(r);
 
                     String location = "http://" + redirectPath + ":8000/sudoku?" + r.query ;
@@ -112,41 +115,41 @@ public class LoadBalancer {
                     return;
                 }catch(IOException e){
                     Logger.log(e.toString());
+                    LoadBalancer.inqueue.add(r);
                     return;
                 }
             }
 
         }
 
+        /*
+        * Função que toma a decisão de encaminhamento do pedido.
+        * */
         private String decide(Request r) throws InterruptedException{
             Logger.log("This code Delivers the task to the servers");
             Logger.log(r.toString());
             Logger.log("#####");
 
-            int size=0;
-
-            Set<Instance> ins = CMonitor.getActiveInstances();
-
-            while( ins.size() == 0 ){
-                Logger.log(
-                        "."
-                );
+            Set<String> tmp = CMonitor.keys();
+            while( tmp.size() == 0 ){
+                Logger.log(".");
                 Thread.sleep(100);
-                ins = CMonitor.getActiveInstances();
+                tmp = CMonitor.keys();
             }
 
-            Logger.log("Available VMs");
-            for (Instance i : ins) {
-                Logger.log(i.getPublicDnsName());
-                Logger.log(i.getPublicIpAddress());
-                Logger.log(i.getPrivateIpAddress());
+            Logger.log(tmp.toString());
+
+            String vm = tmp.iterator().next();
+
+            try {
+                String result = CMonitor.get(vm).get("public.ip");
+                return result;
+            }catch (Exception e){
+                Logger.log(" error fetching IP. ");
+                LoadBalancer.inqueue.add(r);
+                throw new InterruptedException();
             }
 
-            Instance i = ins.iterator().next();
-
-            String result = i.getPublicDnsName();
-
-            return result;
         }
     }
 }

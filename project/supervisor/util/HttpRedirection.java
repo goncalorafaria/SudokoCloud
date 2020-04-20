@@ -9,8 +9,10 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-
 public class HttpRedirection {
+    /**
+     * Esta classe trata dos detalhos de mandar http redirect.
+     * */
 
     public static void send(HttpExchange ex, String redirectPath)
             throws IOException {

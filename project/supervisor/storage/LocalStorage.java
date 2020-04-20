@@ -11,7 +11,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import supervisor.util.Logger;
 
 public class LocalStorage<V> implements Storage<V> {
-
+    /**
+     * Implementação de uma tabela através de um ficheiro.
+     * */
     private static Map<String, Map> database;
     private static String dbfile = "bin/Storage.db";
     private String tablename;
@@ -30,14 +32,21 @@ public class LocalStorage<V> implements Storage<V> {
         }
     }
 
-    public LocalStorage(String table) throws Exception {
+    public static void init(String dir){
+        dbfile = dir;
+        init();
+    }
+
+    public LocalStorage(String table){
         this.tablename = table;
 
-        if( !database.containsKey(tablename) )
+        if( !database.containsKey(tablename) ) {
             LocalStorage.database.put(
-                table, 
-                new ConcurrentSkipListMap<String,Map>() 
+                    table,
+                    new ConcurrentSkipListMap<String, Map>()
             );
+        }
+        //Logger.log(LocalStorage.database.toString());
         LocalStorage.save();
     }
 
@@ -46,7 +55,7 @@ public class LocalStorage<V> implements Storage<V> {
     }
 
     public void put(String key, Map<String,V> newItem){
-
+        //Logger.log(database.toString());
         database.get(this.tablename).put(key, newItem);
         LocalStorage.save();
     }
@@ -75,6 +84,12 @@ public class LocalStorage<V> implements Storage<V> {
         LocalStorage.save();
 
         return r;
+    }
+
+    public boolean contains(String key){
+
+        return database.
+                get(this.tablename).containsKey(key);
     }
     
     public void destroy(){

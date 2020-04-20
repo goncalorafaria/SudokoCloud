@@ -1,10 +1,17 @@
 import BIT.highBIT.ClassInfo;
 
+import supervisor.server.CNode;
+import supervisor.storage.LocalStorage;
 import supervisor.util.Logger;
 
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
+
+/*
+* This class instruments SolverMain and WebServer.
+* Loads auxiliary strucutres and Amazon connection.
+* */
 
 public class ILoad {
 
@@ -25,14 +32,11 @@ public class ILoad {
                             "ILoad",
                             "start",
                             new Integer(1));
-                    routine.addBefore(
-                        "ICount",
-                        "start",
-                        new Integer(1));
 
             }
 
-            ci.addAfter("ILoad", "termination",new Integer(1));
+            if(infilename.equals("solver/SolverMain.class"))
+                ci.addAfter("ILoad", "termination",new Integer(1));
 
             ci.write(outdir + System.getProperty("file.separator") + infilename);
         }
@@ -40,12 +44,16 @@ public class ILoad {
     }
 
     public static void start(int incr){
-        Logger.publish(false,true);
-        ICount.init();
+        Logger.publish(true,true);
+        LocalStorage.init();
+        CNode.init();
+
+        //ICount.init();
         Logger.log("start");
     }
 
     public static void termination(int incr){
+        CNode.terminate();
         Logger.log("terminated");
     }
 

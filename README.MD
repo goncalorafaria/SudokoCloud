@@ -1,14 +1,18 @@
 ## Dependencies.
 
-É preciso indicar a diretoria da API da AWS no ficheiro dep.config.
-
+* AWS
+* JAVA 7
  
 #### Before running the code:
-Fill in your AWS access credentials in the provided credentials file template, and be sure to move the file to the default location (~/.aws/credentials) where the sample code will load the credentials from.
+* Fill in your AWS access credentials in the provided credentials file template, and be sure to move the file to the default location (~/.aws/credentials) where the sample code will load the credentials from.
 
 https://console.aws.amazon.com/iam/home?#security_credential
 
-## Execution.
+* Ir ao ao ficheiro dep.config e alterar a variável $AWS_DIR para a diretoria da api do aws.
+
+* chmod 755 aos ficheiro *.sh
+
+## Execution
 
 *  Executa o program em C para calcular tempos de vários parametros de execução e coleciona o resultados de instrumentação
 
@@ -22,7 +26,10 @@ https://console.aws.amazon.com/iam/home?#security_credential
 
 ` $ ./server.sh `
 
-
 * Executa o load balancer
 
 ` $ ./balancer.sh `
+
+* Limpa os ficheiros gerados nas execuções anteriores.
+
+` $ ./clean.sh `

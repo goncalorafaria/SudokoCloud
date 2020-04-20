@@ -4,6 +4,9 @@ import java.io.PrintWriter;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Logger {
+    /*
+    * Logger for debugging.
+    * */
 
     private static AtomicBoolean bpublish = new AtomicBoolean(false);
     private static AtomicBoolean bfile = new AtomicBoolean(false);
