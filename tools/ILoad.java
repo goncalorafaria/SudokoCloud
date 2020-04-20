@@ -35,7 +35,8 @@ public class ILoad {
 
             }
 
-            ci.addAfter("ILoad", "termination",new Integer(1));
+            if(infilename.equals("solver/SolverMain.class"))
+                ci.addAfter("ILoad", "termination",new Integer(1));
 
             ci.write(outdir + System.getProperty("file.separator") + infilename);
         }

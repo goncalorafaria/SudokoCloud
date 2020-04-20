@@ -13,16 +13,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 import supervisor.storage.LocalStorage;
 import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
 
-import com.amazonaws.services.ec2.model.Instance;
-
-
 public class LoadBalancer {
-
 
     /* Fila de pedidos http */
     private static LinkedBlockingQueue<Request> inqueue = new LinkedBlockingQueue<>();
@@ -51,7 +46,7 @@ public class LoadBalancer {
             // start redirection thread
             worker.start();
 
-            //CMonitor.summon();
+            CMonitor.summon();
 
             HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
             server.createContext("/sudoku", new Request.Handler());
@@ -59,7 +54,7 @@ public class LoadBalancer {
 
             //Thread.sleep(10000);
 
-            CMonitor.terminate();
+            //CMonitor.terminate();
             // start http server.
             server.start();
         }catch (Exception e ){

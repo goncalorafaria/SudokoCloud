@@ -2,22 +2,20 @@ import BIT.highBIT.*;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import supervisor.server.CNode;
 import supervisor.server.Count;
-import supervisor.server.Metric;
-import supervisor.util.Logger;
 
 public class ICount {
     /*
      * Instruments metric collection.
      * */
 
-    private static Map<Long, Count> counter;
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
      */
+
+    private static boolean overhead = false;
 
     public static void main(String argv[]) {
         File file_in = new File(argv[0]);
@@ -25,10 +23,22 @@ public class ICount {
         boolean[] tr = new boolean[4];
 
         if( argv.length > 2 ){
-            tr[0] = Integer.parseInt(argv[2])==1;// instructions
-            tr[1] = Integer.parseInt(argv[3])==1;// methods
-            tr[2] = Integer.parseInt(argv[4])==1;// loops
-            tr[3] = Integer.parseInt(argv[5])==1;// inc
+
+            if( argv.length == 3 )
+                overhead = Boolean.parseBoolean(argv[2]);
+
+            if( overhead ){
+                tr[0]=false;
+                tr[1]=false;
+                tr[2]=false;
+                tr[3]=false;
+            }else{
+                tr[0] = Integer.parseInt(argv[2])==1;// instructions
+                tr[1] = Integer.parseInt(argv[3])==1;// methods
+                tr[2] = Integer.parseInt(argv[4])==1;// loops
+                tr[3] = Integer.parseInt(argv[5])==1;// inc
+            }
+
         }else{
             tr[0]=true;
             tr[1]=true;
@@ -53,6 +63,10 @@ public class ICount {
 
                     for (Enumeration b = routine.getBasicBlocks().elements(); b.hasMoreElements(); ) {
                         BasicBlock bb = (BasicBlock) b.nextElement();
+
+                        if(overhead)
+                            bb.addBefore("ICount", "countover", new Integer(bb.size()));
+
                         if(tr[0])
                             bb.addBefore("ICount", "count", new Integer(bb.size()));
 
@@ -72,11 +86,14 @@ public class ICount {
                                 if( instructions[j].getOpcode() == InstructionTable.iinc ){
                                     instructions[j].addBefore("ICount", "countinc", 1);
                                 }
+
+                                short instr_type = InstructionTable.InstructionTypeTable[instructions[j].getOpcode()];
+
+                                //if( instr_type == InstructionTable.STORE_INSTRUCTION )
+                                 //   instructions[j].addBefore("ICount","counts",1);
                             }
                         }
                     }
-
-
                 }
 
                 ci.write(argv[1] + System.getProperty("file.separator") + infilename);
@@ -86,12 +103,17 @@ public class ICount {
 
     public static void countinc(int incr) {
         Count c = (Count)CNode.getTask().getMetric("Count");
-        c.counti(incr).countinc();
+        c.countinc();
     }
 
     public static void count(int incr) {
         Count c = (Count)CNode.getTask().getMetric("Count");
         c.counti(incr).countb();
+    }
+
+    public static void countover(int incr) {
+        Count c = (Count)CNode.getTask().getMetric("Overhead");
+        c.counti(incr);
     }
 
     public static void mcount(int incr) {

@@ -3,7 +3,6 @@ package supervisor.server;
 import com.amazonaws.util.Base64;
 
 import java.io.*;
-import java.util.Queue;
 
 public class Count extends Metric implements java.io.Serializable {
 
@@ -27,6 +26,18 @@ public class Count extends Metric implements java.io.Serializable {
         this.inc_count += k*(b.inc_count - this.inc_count)/n;
     }
 
+    public int getV(int index){
+        switch (index){
+            case 0: return i_count;
+            case 1: return b_count;
+            case 2: return m_count;
+            case 3: return br_count;
+            case 4: return inc_count;
+            default: return -1;
+        }
+    }
+
+
     public Count( Count a ){
         this.i_count = a.i_count;
         this.b_count = a.b_count;
@@ -40,7 +51,7 @@ public class Count extends Metric implements java.io.Serializable {
          return !((i_count == b_count)&&
                     (b_count == m_count)&&
                     (m_count == br_count)&&
-                    (br_count == inc_count));
+                    (br_count == inc_count) );
      }
 
     public Count(){ }
@@ -52,11 +63,11 @@ public class Count extends Metric implements java.io.Serializable {
     public synchronized Count countinc(){ inc_count++; return this; }
 
     public String toString(){
-        return m_count + ":" + b_count + ":" + i_count + ":" + inc_count + ":" + br_count;
+        return  i_count + ":" + b_count + ":" + m_count + ":" + br_count + ":" + inc_count;
     }
 
     public String explain(){
-        return "method:basicblock:instruction:increment:branch";
+        return "instruction:basicblock:method:branch:increment";
     }
 
     public String toBinary() throws IOException {
@@ -76,3 +87,5 @@ public class Count extends Metric implements java.io.Serializable {
         return (Count)o;
     }
 }
+
+

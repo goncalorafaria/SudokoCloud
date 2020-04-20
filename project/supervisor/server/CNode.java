@@ -1,14 +1,7 @@
 package supervisor.server;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import supervisor.storage.LocalStorage;
 import supervisor.storage.Storage;
-import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
 
 import java.io.IOException;
@@ -25,7 +18,6 @@ public class CNode {
     /*
     *  This is the Server Hypervisor class.
     * */
-    private static AmazonEC2 ec2;
 
     private static Map< Long, Task > activetasks
             = new ConcurrentSkipListMap<>();
@@ -42,22 +34,7 @@ public class CNode {
 
     private static Publisher worker;// thread that publishes the collected metrics.
 
-    public static void init() throws AmazonClientException {
-
-        AWSCredentials credentials = null;
-
-        try {
-            credentials = new ProfileCredentialsProvider().getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. " +
-                            "Please make sure that your credentials file is at the correct " +
-                            "location (~/.aws/credentials), and is in valid format.",
-                    e);
-        }
-
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CloudStandart.region )
-                .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+    public static void init() {
 
         try{
             CNode.requestTable = new LocalStorage<String>("RequestTable");
@@ -73,10 +50,15 @@ public class CNode {
 
     /* Associa um novo pedido a um thread. */
     public static void registerTask(String taskkey){
+        registerTask( taskkey,false);
+    }
+
+    public static void registerTask(String taskkey, boolean overhead ){
         Logger.log("Registering task:" + taskkey);
 
         Task t = new Task(taskkey);
         t.addMetric("Count",new Count());
+        t.addMetric("Overhead", new Count());
 
         activetasks.put(Thread.currentThread().getId(), t );
 
@@ -108,6 +90,7 @@ public class CNode {
 
     public static void terminate(){
         Publisher.off();
+        worker.interrupt();
     }
 
     static class Publisher extends Thread {
@@ -130,23 +113,32 @@ public class CNode {
                     Set<Task> taskr = new HashSet<>();
                     oldtasks.get(tsk).drainTo(taskr);
 
-                    Set<Metric> mpub = Task.condense(taskr);
-                    Map<String,String> row;
+                    for( Task itask : taskr ) {
+                        Map<String, String> row;
 
-                    if( mpub.size() > 0 ){
-
-                        Count c = (Count) mpub.iterator().next();
-                        if( requestTable.contains(tsk)){
+                        if (requestTable.contains(tsk)) {
                             row = requestTable.get(tsk);
-                            Count cold = Count.fromString(row.get("Count"));
-                            c.aggregate(cold);
-                        }else{
+                        } else {
                             row = new HashMap<>();
                         }
-                        row.put("Count",c.toBinary());
-                        requestTable.put(tsk, row);
 
+                        for (String mname : itask.metricsK()) {
+
+                            Metric m = itask.getMetric(mname);
+                            Logger.log(mname);
+                            Count c = (Count) m;
+
+                            if(c.valid()) {
+                                if( row.containsKey(mname) ) {
+                                    Count cold = Count.fromString(row.get(mname));
+                                    c.aggregate(cold);
+                                }
+                                row.put(mname, c.toBinary());
+                            }
+                        }
+                        requestTable.put(tsk, row);
                     }
+                    oldtasks.remove(tsk);
 
                 }catch(InterruptedException e){
                     Logger.log(e.getMessage());
