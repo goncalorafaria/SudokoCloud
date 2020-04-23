@@ -1,4 +1,5 @@
 import supervisor.server.CNode;
+import supervisor.server.CloudStandart;
 import supervisor.server.Task;
 import supervisor.util.Logger;
 import BIT.highBIT.*;
@@ -42,7 +43,7 @@ public class HijackQuery {
     }
 
     public static void startTask(String[] args){
-        CNode.registerTask( Task.makeKey(args) );
+        CNode.registerTask( CloudStandart.makeKey(args) );
     }
 
     public static void endTask(String garbage){

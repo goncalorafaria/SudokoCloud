@@ -2,6 +2,7 @@ import BIT.highBIT.ClassInfo;
 
 import supervisor.server.CNode;
 import supervisor.storage.LocalStorage;
+import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
 
 import java.util.Enumeration;
@@ -45,7 +46,9 @@ public class ILoad {
 
     public static void start(int incr){
         Logger.publish(true,true);
-        LocalStorage.init();
+
+        TaskStorage.init(true);
+
         CNode.init();
 
         //ICount.init();

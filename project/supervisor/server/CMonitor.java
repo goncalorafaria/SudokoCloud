@@ -1,54 +1,51 @@
 package supervisor.server;
 
-import BIT.highBIT.*;
 
-import java.util.*;
-import java.util.HashMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
-
-import supervisor.storage.LocalStorage;
-import supervisor.storage.Storage;
-import supervisor.util.Logger;
-
-import com.amazonaws.services.ec2.model.RunInstancesResult;
-import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.AmazonEC2;
+import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
+import com.amazonaws.services.ec2.model.*;
+import com.amazonaws.util.Base64;
+import supervisor.storage.Storage;
+import supervisor.storage.TaskStorage;
+import supervisor.util.Logger;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.lang.Thread.sleep;
 
 public class CMonitor {
     /*
      *  This is the Hypervisor class for the balancer.
      * */
-
     private static AmazonEC2 ec2;
+    private static AWSCredentials credentials;
 
-    private static String imageid = "ami-0cb790308f7591fa6";
-    private static String collectorimageid = "ami-0cb790308f7591fa6";
+    private static final String imageid = "ami-03325428ec24a6273";
+    private static final String collectorimageid = "ami-0cb790308f7591fa6";
 
-    private static String instancetype = "t2.micro";
-    private static String keyname = "CNV-lab-AWS";
-    private static String securitygroups = "CNV-ssh+http";
+    private static final String instancetype = "t2.micro";
+    private static final String keyname = "CNV-lab-AWS";
+    private static final String securitygroups = "CNV-ssh+http";
 
-    private static AtomicBoolean updating = new AtomicBoolean(false);
+    private static final AtomicInteger startingvms = new AtomicInteger(0);
 
-    private static Storage<String> vmstates;
+    private static final Map<String, CMonitor.Endpoint> vmstatesl = new ConcurrentSkipListMap<>();
+    //private static Storage<Endpoint> vmstates;
     /* Storage persistente que guarda as máquinas virtuais e as suas propriedades(ip, queue size etc)*/
 
     private static Storage<String> requestTable;
@@ -57,15 +54,15 @@ public class CMonitor {
     private static Set<String> activevms;
     /* Storage local que guarda as máquinas virtuais que estão a prontas a receber pedidos. */
 
-    private static Map<String, Long> workload = new HashMap<>();
-    /* Storage local com a estimativa da carga de cada vm. (desde a ultima atualização) */
-
     public static void init() throws AmazonClientException {
-
-        AWSCredentials credentials = null;
 
         try {
             credentials = new ProfileCredentialsProvider().getCredentials();
+            ec2 = AmazonEC2ClientBuilder.standard()
+                    .withRegion(CloudStandart.region)
+                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                    .build();
+            //credentials = new BasicAWSCredentials(credentials.getAWSAccessKeyId(),credentials.getAWSSecretKey());
         } catch (Exception e) {
             throw new AmazonClientException(
                     "Cannot load the credentials from the credential profiles file. " +
@@ -74,22 +71,52 @@ public class CMonitor {
                     e);
         }
 
-        ec2 = AmazonEC2ClientBuilder.standard().withRegion( CloudStandart.region )
-                .withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
 
-        try{
-            CMonitor.vmstates = new LocalStorage<String>("VirtualMachines");
-        }catch(Exception e){
-            Logger.log("error loading MonitorTable");
+
+        CMonitor.requestTable = new TaskStorage();
+
+        CMonitor.activevms = new ConcurrentSkipListSet<>();
+    }
+
+    public static void autoscale(int requests) {
+        //Logger.log( String.valueOf( CMonitor.startingvms.get() ));
+        //Logger.log( activevms.toString() );
+
+        HashSet<CMonitor.Endpoint> a = new HashSet<>();
+
+        int s = 0;
+
+        int iddle = CMonitor.vmstatesl.size();
+
+        for (String vm : new HashSet<>(activevms)) {
+            a.add(CMonitor.vmstatesl.get(vm));
+            s += CMonitor.vmstatesl.get(vm).qsize.get();
         }
 
-        try{
-            CMonitor.requestTable = new LocalStorage<String>("RequestTable");
-        }catch(Exception e){
-            Logger.log("error loading RequestTable");
+
+        if (requests + s + 1 < iddle) {
+            Iterator<CMonitor.Endpoint> it = a.iterator();
+
+            int min = Integer.MAX_VALUE;
+            String mvm = null;
+
+            while (it.hasNext()) {
+                CMonitor.Endpoint element = it.next();
+                int candidate = element.qsize.get();
+
+                if (candidate <= min) {
+                    min = candidate;
+                    mvm = element.vm;
+
+                }
+            }
+            schedulerecall(mvm);
         }
 
-        CMonitor.activevms  = new ConcurrentSkipListSet<>(CMonitor.vmstates.keys());
+        if (requests + s >= 2.5 * iddle) {
+            Logger.log("summon:");
+            CMonitor.summon();
+        }
 
     }
 
@@ -97,143 +124,126 @@ public class CMonitor {
     public static String summon() throws AmazonServiceException {
 
         RunInstancesRequest runInstancesRequest =
-               new RunInstancesRequest();
+                new RunInstancesRequest();
+
+        String launchscript = "#!/bin/bash \n" +
+                "cd /home/ec2-user\n" +
+                "sudo echo " + credentials.getAWSAccessKeyId() + " > cred.txt\n"+
+                "sudo echo " + credentials.getAWSSecretKey() + " >> cred.txt\n"+
+                "./server.sh \n";
 
         runInstancesRequest.withImageId(imageid)
-            .withInstanceType(instancetype)
-            .withMinCount(1)
-            .withMaxCount(1)
-            .withKeyName(keyname)
-            .withSecurityGroups(securitygroups);
-        
+                .withInstanceType(instancetype)
+                .withMinCount(1)
+                .withMaxCount(1)
+                .withKeyName(keyname)
+                .withSecurityGroups(securitygroups)
+                .withUserData(
+                        Base64.encodeAsString(launchscript.getBytes()));
+
+
         RunInstancesResult runInstancesResult =
-            ec2.runInstances(runInstancesRequest);
+                ec2.runInstances(runInstancesRequest);
 
         Instance newInstance = runInstancesResult
-            .getReservation().getInstances()
-            .get(0);
+                .getReservation().getInstances()
+                .get(0);
 
-        String newInstanceId =  newInstance.getInstanceId();
+        String newInstanceId = newInstance.getInstanceId();
 
         Logger.log("New Instanceid: ");
         Logger.log(newInstanceId);
 
-        SelfExecutingQueue.add(newInstanceId);
+        //SelfExecutingQueue.add(newInstanceId);
+
+        CMonitor.vmstatesl.put(newInstanceId, new Endpoint(newInstanceId));
+
+        CMonitor.startingvms.addAndGet(1);
 
         return newInstanceId;
     }
 
-    static void updateCache( Set<String> readyids,  Map<String,Instance> instances ){
-        Logger.log("Updating cache!");
-        for( String vm: readyids ) {
-            Logger.log(vm);
-            Instance vmi = instances.get(vm);
-
-            Map<String, String> properties = new HashMap<>();
-
-            properties.put(
-                    "public.ip",
-                    vmi.getPublicIpAddress()
-            );
-
-            properties.put(
-                    "queue.size",
-                    "0"
-            );
-
-            properties.put(
-                    "private.ip",
-                    vmi.getPrivateIpAddress()
-            );
-
-            properties.put(
-                    "dns",
-                    vmi.getPublicDnsName()
-            );
-
-            CMonitor.vmstates.put(
-                    vm,
-                    properties
-            );
-            Logger.log(" vmstates ");
-            CMonitor.workload.put(
-                    vm,
-                    0L
-            );
-
-            Logger.log("checkif:" + vmstates.describe());
-
-            CMonitor.activevms.add(vm);
-
-            Logger.log(" Adding as Active ");
-            Logger.log( readyids.toString() );
-        }
-    }
-
     /* Desliga uma VM assim que esta acabar de servir. */
-    public static Map<String,String> schedulerecall( String vmid ){
 
-        if( CMonitor.activevms.contains(vmid) ){
-            CMonitor.activevms.remove(vmid);
 
-            Recaller worker = new Recaller(vmid);
-            worker.start();
-        }else{
-            Logger.log("This vm is not active! ");
-        }
-
-        return CMonitor.vmstates.get(vmid);
+    public static void schedulerecall(String vmid) {
+        CMonitor.vmstatesl.remove(vmid).recall();
     }
+
 
     /* Termina imediatamente uma Máquina Virtual - Inseguro */
-    private static void recall(String vmid ) {
+
+    private static void recall(String vmid) {
 
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
-        
+
         termInstanceReq.withInstanceIds(vmid);
-        try{
+        try {
             ec2.terminateInstances(termInstanceReq);
-        }catch (AmazonServiceException e){
+            Logger.log("Amazon shut up:" + vmid);
+        } catch (AmazonServiceException e) {
             Logger.log(e.toString());
         }
 
-
-        if( CMonitor.activevms.contains(vmid) )
-            CMonitor.activevms.remove(vmid);
-
-        CMonitor.vmstates.remove(vmid);
-        CMonitor.workload.remove(vmid);
-
-        Logger.log("Recalling: "+ vmid);
     }
 
-    public static Map<String,String> get(String vmid){
+    /* returns IP for next task */
+    public static String decide(String s) throws InterruptedException {
+        Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
-        return CMonitor.vmstates.get(vmid);
-    }
+        Logger.log("contains :" + s + CMonitor.requestTable.contains(s));
+        if (CMonitor.requestTable.contains(s)) {
+            Logger.log(CMonitor.requestTable.get(s).toString());
+        }
 
-    public static String describe(){
-        return CMonitor.vmstates.describe();
+        Logger.log(CMonitor.activevms.toString());
+        Logger.log(CMonitor.vmstatesl.toString());
+
+        while (tmp.size() == 0) {
+            Logger.log(".");
+            sleep(5000);
+            tmp.addAll(CMonitor.activevms);
+        }
+
+        Set<CMonitor.Endpoint> a = new HashSet<>();
+
+        for (String vm : tmp)
+            a.add(CMonitor.vmstatesl.get(vm));
+
+
+        Iterator<CMonitor.Endpoint> it = a.iterator();
+
+        int min = Integer.MAX_VALUE;
+        String mvm = null;
+
+        while (it.hasNext()) {
+            CMonitor.Endpoint element = it.next();
+            int candidate = element.qsize.get();
+
+            if (candidate <= min) {
+                min = candidate;
+                mvm = element.publicip;
+
+            }
+        }
+
+        return mvm;
     }
 
     /* TODO: Remover as restantes estruturas. */
-    public static void terminate(){
+    public static void terminate() {
 
-        for( String k: CMonitor.vmstates.keys())
+        for (String k : CMonitor.vmstatesl.keySet())
             CMonitor.recall(k);
 
-        CMonitor.vmstates.destroy();
+        //CMonitor.vmstates.destroy();
 
-    }
-
-    public static Set<String> keys(){
-        return new HashSet<>(CMonitor.activevms);
     }
 
     /* Obtêm a listagem de VM ATIVAS */
-    private static Map<String,Instance> getActiveInstances() {
+    private static Map<String, Instance> getActiveInstances() {
 
-        Map<String,Instance> instances = new HashMap<>();
+        Map<String, Instance> instances = new HashMap<>();
 
         DescribeInstancesRequest request = new DescribeInstancesRequest();
 
@@ -242,7 +252,7 @@ public class CMonitor {
         for (Reservation reservation : response.getReservations()) {
             for (Instance instance : reservation.getInstances()) {
                 //Logger.log( "reservation: " + instance.getInstanceId());
-                if( instance.getState().getName().equals("running") )
+                if (instance.getState().getName().equals("running"))
                     instances.put(instance.getInstanceId(), instance);
             }
         }
@@ -250,121 +260,134 @@ public class CMonitor {
         return instances;
     }
 
-    static class Recaller extends Thread{
-        // waits for the server to stop serving to issue a recall
-        private String vmid;
+    static class Endpoint extends Thread implements Comparable<Endpoint> {
 
-        Recaller(String vmid){
-            this.vmid = vmid;
+        private final String vm;
+        private final AtomicBoolean active = new AtomicBoolean(true);
+        private final AtomicInteger qsize = new AtomicInteger(0);
+        private String dns;
+        private String privateip;
+        private String publicip;
+        private BufferedReader in;
+        private Socket sc;
+
+
+        public Endpoint(String vm) {
+            this.vm = vm;
+            this.start();
         }
 
         @Override
+        public int compareTo(Endpoint o) {
+            return this.qsize.get() - o.qsize.get();
+        }
+
+        public void recall() {
+            CMonitor.activevms.remove(vm);
+            this.active.getAndSet(false);
+        }
+
+
         public void run() {
-            boolean b = true;
+            boolean bcalling = true;
 
-            while( b ){
-                b = ! CMonitor.vmstates.get(vmid).get("queue.size").equals("0");
-
+            Logger.log("Searching: " + vm);
+            while (bcalling && active.get()) {
                 try {
-                    Thread.sleep(1000); // 1 sec
-                }catch (InterruptedException e){
-                    Logger.log("Recalled Interrupted");
+                    bcalling = searching();
+                    sleep(500);
+                } catch (InterruptedException e) {
+                    Logger.log(e.toString());
                 }
-
             }
 
-            CMonitor.recall(vmid);
+            Logger.log("Calling: " + vm);
+
+            bcalling = true;
+            while (bcalling && active.get()) {
+                try {
+                    bcalling = calling();
+                    sleep(1000 * 2);
+                } catch (InterruptedException e) {
+                    Logger.log(e.toString());
+                }
+            }
+
+            CMonitor.activevms.add(vm);
+            CMonitor.startingvms.addAndGet(-1);
+
+            Logger.log("Fetching: " + vm);
+            while (active.get() || this.qsize.get() > 0) {
+                try {
+                    fetching();
+                } catch (IOException e) {
+                    Logger.log(e.toString());
+                }
+            }
+
+            this.recalling();
         }
+
+        private void recalling() {
+
+            try {
+                this.sc.close();
+            } catch (IOException e) {
+                Logger.log(e.toString());
+            }
+
+            CMonitor.recall(this.vm);
+        }
+
+        private void fetching() throws IOException {
+            this.qsize.getAndAdd(
+                    Integer.parseInt(
+                            in.readLine()));
+
+            Logger.log("<" + this.vm + ">" + this.qsize.get());
+        }
+
+        private boolean calling() {
+            boolean c = true;
+            try {
+                this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
+                c = false;
+
+                this.sc.setSoTimeout(20 * 1000);
+
+                this.in = new BufferedReader(
+                        new InputStreamReader(
+                                sc.getInputStream()));
+
+                Logger.log("Tunnel open");
+
+            } catch (UnknownHostException e) {
+                Logger.log(e.toString());
+            } catch (IOException e) {
+                Logger.log(e.toString());
+            }
+
+            return c;
+        }
+
+        private boolean searching() {
+
+            Map<String, Instance> ins = CMonitor.getActiveInstances();
+
+            if (ins.containsKey(this.vm)) {
+                Instance vmi = ins.get(vm);
+
+                this.dns = vmi.getPublicDnsName();
+                this.privateip = vmi.getPrivateIpAddress();
+                this.publicip = vmi.getPublicIpAddress();
+
+                return false;
+            } else {
+                return true;
+            }
+
+        }
+
     }
 
-    static class SelfExecutingQueue extends Thread{
-        private static ReentrantLock rl;
-        private static Condition c;
-        private static Queue<String> q = new ArrayDeque<>();
-        private static boolean updating = false;
-
-        static{
-            SelfExecutingQueue.rl = new ReentrantLock();
-            SelfExecutingQueue.c = rl.newCondition();
-        }
-
-        public static void add(String vmid){
-            try{
-                rl.lock();
-
-                q.add(vmid);
-                c.signal();
-
-                if( updating == false ){
-                    updating = true;
-                    (new SelfExecutingQueue()).start();
-                }
-
-            }finally {
-                rl.unlock();
-            }
-        }
-
-        @Override
-        public void run() {
-
-            Map<String,Instance> ins ;
-            int cycles = 3;
-            Set<String> workload = new HashSet<>();
-            Set<String> iset;
-            Queue<String> tmpq;
-            boolean halt = true;
-
-            // loop;
-
-            while( cycles > 0 || workload.size() != 0) { // enquanto ha ciclos ou elementos à espera.
-
-                ins = CMonitor.getActiveInstances();
-
-                try {
-                    rl.lock();
-                    tmpq = SelfExecutingQueue.q;
-                    SelfExecutingQueue.q = new ArrayDeque<>();
-                } finally {
-                    rl.unlock();
-                }
-
-                workload.addAll(tmpq);
-                iset = new TreeSet<>(workload);
-                iset.retainAll(ins.keySet()); // iset contains intersection.
-
-                if (iset.size() > 0) {
-                    // do the updating
-                    CMonitor.updateCache(iset, ins);
-                    workload.removeAll(iset);
-                    Logger.log("Terminated update Cache.");
-                }
-
-                if (workload.size() == 0) {// (Se não tiver pedidos por fazer)
-                    cycles -= ((tmpq.size() == 0) ? 1 : 0);
-                    if( cycles == 0 ){
-                        Logger.log("DynamicQ:about to leave");
-                        try{
-                            rl.lock();
-                            updating = false;
-                            halt=false;
-                        }finally {
-                            rl.unlock();
-                        }
-                    }
-                }
-
-                if( halt ){
-                    try {
-                        rl.lock();
-                            c.await(100, TimeUnit.MILLISECONDS);
-                    }catch (InterruptedException e){
-                        Logger.log(e.getMessage());
-                    }finally {
-                        rl.unlock();
-                    }
-                }
-            }
-        }
-    }
 }
