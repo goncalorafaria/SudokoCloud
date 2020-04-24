@@ -1,5 +1,8 @@
 package supervisor.storage;
 
+import supervisor.server.Count;
+
+import java.util.HashMap;
 import java.util.Map;
 
 public class TaskStorage extends RemoteStorage {
@@ -19,5 +22,10 @@ public class TaskStorage extends RemoteStorage {
         newItem.put("un", un);
 
         super.put(key, newItem);
+    }
+
+
+    public Map<String, Count> queryMetrics(String classe){
+        return new HashMap<>();
     }
 }

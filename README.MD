@@ -11,7 +11,7 @@
 
 * Give execution permissions to the shell scripts by doing: ` $ chmod 755 *.sh `
 
-* Go to the file dep.config and change the value of $AWS_DIR to the location of the AWS java sdk.
+* Go to the file dep.config and change the value of $AWS_DIR and $REGION to the location of the AWS java sdk.
 
 * Compile the code using:
 ` $ ./compile.sh `. 
@@ -38,28 +38,11 @@ https://console.aws.amazon.com/iam/home?#security_credential
 
 * Run the script ` $ ./balancer.sh `.
 
+#### Data
+
+The data from the experiments is in data/dataplot.ipynb.(Jupyter notebook) The experiments were performed in the Aws instances and stored using the LocalStorage class. Using the LocalStorageReader program the metrics were transformed into an appropriate format for plotting with python.
+
 #### Notes
 
 Ideally would split the code into two self contained pieces, one for the web server other for the web balancer. 
 The source code already allows this, we just need to do the scripts that actually do this in a nice way. (will be left for the next checkpoint)
-## Execution
-
-*  Executa o program em C para calcular tempos de vários parametros de execução e coleciona o resultados de instrumentação
-
-` $ ./crun.sh `
-
-*  Executa um exemplo no solver diretamente.
-
-` $ ./solve.sh `
-
-* Executa o servidor
-
-` $ ./server.sh `
-
-* Executa o load balancer
-
-` $ ./balancer.sh `
-
-* Limpa os ficheiros gerados nas execuções anteriores.
-
-` $ ./clean.sh `

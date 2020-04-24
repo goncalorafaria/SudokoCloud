@@ -13,16 +13,8 @@ public class RemoteStorageReader {
         CloudStandart.init();
         RemoteStorage.init(false);
 
-
-        RemoteStorage a = new RemoteStorage("UUUUU","key");
+        TaskStorage a = new TaskStorage();
 
         System.out.println(a.describe());
-
-        Map<String,String> s = new HashMap<>();
-        s.put("name","gooc");
-
-        a.put("r3",s);
-
-        System.out.println(a.get("r3"));
     }
 }
