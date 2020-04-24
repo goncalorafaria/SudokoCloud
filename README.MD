@@ -1,3 +1,8 @@
+### Author
+
+Trabalho Realizado por Gonçalo Rui Alves Faria. 97031
+
+
 ## Dependencies.
 * AWS java sdk 1.11
 * JAVA 7 
@@ -28,7 +33,7 @@ The 4 arguments case takes the form:
 The 1 argument case can either be true or false. (true for collecting overhead false for not).
 ` $ java ICount --indir --outdir --overhead `
 
-* An image can now be created for future use using the AWS S2 dashboard. 
+* An image can now be created for future use using the AWS S2 dashboard. (do not load the security credentials in the instance ~/.aws) 
 
 * After creating the snapshot, fill in your AWS access credentials in the provided credentials file template, and be sure to move the file to the default location (~/.aws/credentials).
 

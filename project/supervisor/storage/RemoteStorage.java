@@ -21,7 +21,7 @@ public class RemoteStorage implements Storage<String> {
 
     public static AmazonDynamoDB dynamoDB;
     public static Table rTable;
-    private final String table;
+    protected final String table;
     private final String key;
 
     public RemoteStorage(String table, String key) {
