@@ -40,7 +40,7 @@ public class LocalStorage<V> implements Storage<V> {
         } catch (Exception e) {
             LocalStorage.database =
                     new ConcurrentSkipListMap<String, Map>();
-            Logger.log("Create db file ");
+            //Logger.log("Create db file ");
         }
     }
 
@@ -56,7 +56,7 @@ public class LocalStorage<V> implements Storage<V> {
             oos.writeObject(LocalStorage.database);
             oos.close();
         } catch (Exception e) {
-            Logger.log(e.toString());
+            //Logger.log(e.toString());
         }
     }
 
@@ -74,7 +74,7 @@ public class LocalStorage<V> implements Storage<V> {
         return (Set<String>) LocalStorage.database.get(this.tablename).keySet();
     }
 
-    /*
+
     public Map<String,V> remove(String key){
         Map<String, Map<String,V>> table =
                 (Map<String, Map<String,V>>)database.get(this.tablename);
@@ -85,7 +85,6 @@ public class LocalStorage<V> implements Storage<V> {
 
         return r;
     }
-    */
 
     public boolean contains(String key) {
 

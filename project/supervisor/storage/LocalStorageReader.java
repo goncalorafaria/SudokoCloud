@@ -7,10 +7,11 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 
-public class StorageReader {
+public class LocalStorageReader {
 
     public static void main(String[] args) throws FileNotFoundException, UnsupportedEncodingException {
-        LocalStorage.init("bin/Storage.db");
+        System.out.println();
+        LocalStorage.init(args[0]);
         Storage<String> requestTable;
         Map<String, Map<Integer, Count>> storage = new HashMap<>();
         Map<String, Map<Integer, List<Integer>>> sp = new HashMap<>();

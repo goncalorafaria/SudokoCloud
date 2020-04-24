@@ -1,10 +1,10 @@
-package supervisor.server;
+package supervisor.balancer;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import supervisor.util.CloudStandart;
 import supervisor.storage.TaskStorage;
-import supervisor.util.HttpRedirection;
 import supervisor.util.Logger;
 
 import java.io.IOException;
@@ -32,6 +32,8 @@ public class LoadBalancer {
         try {
             Logger.publish(true, false);
             Logger.log("Starting the Load balancer");
+
+            CloudStandart.init();
 
             // Load local db
             TaskStorage.init(false);
@@ -105,6 +107,8 @@ public class LoadBalancer {
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
                         HttpRedirection.send(r.tunel, location);
+                    }else{
+                        Logger.log("Autoscalling round ");
                     }
 
 

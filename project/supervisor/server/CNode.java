@@ -2,6 +2,7 @@ package supervisor.server;
 
 import supervisor.storage.Storage;
 import supervisor.storage.TaskStorage;
+import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
 import java.io.IOException;
@@ -19,27 +20,33 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CNode {
-    /*
+    /**
      *  This is the Server Hypervisor class.
      * */
 
+    /* tasks que estão a decorrer, indexadas pelo thread que está a correr. */
     private static final Map<Long, Task> activetasks
             = new ConcurrentSkipListMap<>();
-    /* tasks que estão a decorrer */
 
+    /* tasks que têm de se ter as metricas publicadas para a db. */
     private static final Map<String, Task.Group> oldtasks
             = new ConcurrentSkipListMap<>();
-    /* tasks que têm de se ter as metricas publicadas para a db.*/
 
-    private static final BlockingQueue<String> keyq = new LinkedBlockingQueue();
     /* Fila de espera para publicar as metricas das tasks terminadas */
+    private static final BlockingQueue<String> keyq = new LinkedBlockingQueue();
 
+    /* storage persistente para request metrics. */
     private static Storage<String> requestTable;
 
-    private static Publisher worker;// thread that publishes the collected metrics.
+    /* thread that takes care of publishing metrics to db. */
+    private static Publisher worker;
 
-    private static CNode.EndPoint tunnel;// speaks with balancer.
+    /* class that comunicates with the balancer. */
+    private static CNode.EndPoint tunnel;
 
+    /**
+     * Initializes storage, workers and communication channel with balancer.
+     * */
     public static void init() {
 
         CNode.requestTable = new TaskStorage();
@@ -50,13 +57,14 @@ public class CNode {
         CNode.tunnel = new CNode.EndPoint();
     }
 
-    /* Associa um novo pedido a um thread. */
+    /** Associa um novo pedido a um thread. */
     public static void registerTask(String taskkey) {
         registerTask(taskkey, false);
     }
 
+    /** Associa um novo pedido a um thread. */
     public static void registerTask(String taskkey, boolean overhead) {
-        Logger.log("Registering task:" + taskkey);
+        //Logger.log("Registering task:" + taskkey);
 
 
         if (!activetasks.containsKey(Thread.currentThread().getId())) {
@@ -73,20 +81,21 @@ public class CNode {
             CNode.tunnel.increment();
         }
 
-        Logger.log("start " + Thread.currentThread().getId());
+        //Logger.log("start " + Thread.currentThread().getId());
     }
 
+    /** Termina um novo pedido. */
     public static void finishTask() {
         Long tid = Thread.currentThread().getId();
         Task t = activetasks.remove(tid);
 
-        Logger.log("Finish task:" + t.getKey());
+        //Logger.log("Finish task:" + t.getKey());
 
         oldtasks.get(t.getKey()).add(t);
         keyq.add(t.getKey());/* shedule for publishing*/
 
-        Logger.log("(Explain):" + ((Count) t.getMetric("Count")).explain());
-        Logger.log("(Metrics):" + t.getMetric("Count"));
+        //Logger.log("(Explain):" + ((Count) t.getMetric("Count")).explain());
+        //Logger.log("(Metrics):" + t.getMetric("Count"));
 
         CNode.tunnel.decrement();
     }
@@ -114,9 +123,9 @@ public class CNode {
             while (active.get()) {
 
                 try {
-                    Logger.log("Publisher:Halt");
+                    //Logger.log("Publisher:Halt");
                     String tsk = CNode.keyq.take();
-                    Logger.log("Publisher:Working");
+                    //Logger.log("Publisher:Working");
                     Set<Task> taskr = new HashSet<>();
                     oldtasks.get(tsk).drainTo(taskr);
 
@@ -132,7 +141,7 @@ public class CNode {
                         for (String mname : itask.metricsK()) {
 
                             Metric m = itask.getMetric(mname);
-                            Logger.log(mname);
+                            //Logger.log(mname);
                             Count c = (Count) m;
 
                             if (c.valid()) {
@@ -148,11 +157,11 @@ public class CNode {
                     //oldtasks.remove(tsk);
 
                 } catch (InterruptedException e) {
-                    Logger.log(e.getMessage());
+                    //Logger.log(e.getMessage());
                 } catch (IOException e) {
-                    Logger.log(e.getMessage());
+                    //Logger.log(e.getMessage());
                 } catch (ClassNotFoundException e) {
-                    Logger.log(e.getMessage());
+                    //Logger.log(e.getMessage());
                 }
             }
 
@@ -168,13 +177,13 @@ public class CNode {
         }
 
         public void increment() {
-            Logger.log("Increment");
+            //Logger.log("Increment");
             this.out.println(1);
             this.out.flush();
         }
 
         public void decrement() {
-            Logger.log("Decrement");
+            //Logger.log("Decrement");
             this.out.println(-1);
             this.out.flush();
         }
@@ -187,7 +196,7 @@ public class CNode {
                         sc.getOutputStream()
                 );
 
-                Logger.log("Tunnel open");
+                //Logger.log("Tunnel open");
 
 
             } catch (UnknownHostException e) {

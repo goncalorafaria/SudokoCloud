@@ -10,12 +10,10 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
-import supervisor.server.CloudStandart;
+import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.*;
 
 public class RemoteStorage implements Storage<String> {
@@ -61,7 +59,7 @@ public class RemoteStorage implements Storage<String> {
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
                     .build();
         } catch (Exception e) {
-            Logger.log(e.toString());
+            //Logger.log(e.toString());
             throw new AmazonClientException(
                     "Cannot load the credentials from the credential profiles file. " +
                             "Please make sure that your credentials file is at the correct " +
@@ -79,7 +77,7 @@ public class RemoteStorage implements Storage<String> {
                 TableUtils.waitUntilActive(dynamoDB, table);
                 rd = true;
             } catch (InterruptedException e) {
-                Logger.log(e.toString());
+               // Logger.log(e.toString());
             }
         }
 
@@ -110,7 +108,7 @@ public class RemoteStorage implements Storage<String> {
             );
 
         PutItemResult r = dynamoDB.putItem(new PutItemRequest(table, item));
-        Logger.log("put result: " + r.toString());
+        //Logger.log("put result: " + r.toString());
         // Starting tmp
 
         /*
@@ -134,7 +132,7 @@ public class RemoteStorage implements Storage<String> {
         setup();
         DeleteTableResult r = dynamoDB.
                 deleteTable(new DeleteTableRequest(table));
-        Logger.log("delete result: " + r.toString());
+        //Logger.log("delete result: " + r.toString());
     }
 
     @Override

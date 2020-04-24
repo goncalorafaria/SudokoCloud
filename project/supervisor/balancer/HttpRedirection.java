@@ -1,6 +1,7 @@
-package supervisor.util;
+package supervisor.balancer;
 
 import com.sun.net.httpserver.HttpExchange;
+import supervisor.util.Logger;
 
 import java.io.IOException;
 import java.net.URI;

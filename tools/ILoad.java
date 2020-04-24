@@ -45,19 +45,19 @@ public class ILoad {
     }
 
     public static void start(int incr){
-        Logger.publish(true,true);
+        //Logger.publish(true,true);
 
         TaskStorage.init(true);
 
         CNode.init();
 
         //ICount.init();
-        Logger.log("start");
+        //Logger.log("start");
     }
 
     public static void termination(int incr){
         CNode.terminate();
-        Logger.log("terminated");
+        //Logger.log("terminated");
     }
 
 }
