@@ -4,6 +4,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -49,7 +50,16 @@ public class RemoteStorage implements Storage<String> {
                 File fin = new File("cred.txt");
                 Scanner s = new Scanner(fin);
 
-                credentials = new BasicAWSCredentials(s.nextLine(),s.nextLine());
+                String aws_access_key_id = s.nextLine();
+                String aws_secret_acess_key = s.nextLine();
+
+                if(s.hasNext()){
+                    credentials = new BasicSessionCredentials(
+                            aws_access_key_id,aws_secret_acess_key,s.nextLine());
+                }else{
+                    credentials = new BasicAWSCredentials(
+                            aws_access_key_id,aws_secret_acess_key);
+                }
             }else {
                 credentials = new ProfileCredentialsProvider().getCredentials();
             }

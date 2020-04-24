@@ -5,6 +5,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
@@ -53,6 +54,8 @@ public class CMonitor {
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
     private static Set<String> activevms = new ConcurrentSkipListSet<>();
 
+    private static String launchscript;
+
     /**
      * Does the aws connection, dynamodb connection and
      * */
@@ -64,6 +67,24 @@ public class CMonitor {
                     .withRegion(CloudStandart.region)
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
                     .build();
+
+            if( credentials instanceof BasicSessionCredentials ) {
+                BasicSessionCredentials bsc = (BasicSessionCredentials)credentials;
+                Logger.log("BasicSessionCredentials");
+
+                launchscript = "#!/bin/bash \n" +
+                        "cd /home/ec2-user\n" +
+                        "sudo echo " + bsc.getAWSAccessKeyId() + " > cred.txt\n" +
+                        "sudo echo " + bsc.getAWSSecretKey() + " >> cred.txt\n" +
+                        "sudo echo " + bsc.getSessionToken() + " >> cred.txt\n" +
+                        "./server.sh \n";
+            }else {
+                launchscript = "#!/bin/bash \n" +
+                        "cd /home/ec2-user\n" +
+                        "sudo echo " + credentials.getAWSAccessKeyId() + " > cred.txt\n" +
+                        "sudo echo " + credentials.getAWSSecretKey() + " >> cred.txt\n" +
+                        "./server.sh \n";
+            }
         } catch (Exception e) {
             throw new AmazonClientException(
                     "Cannot load the credentials from the credential profiles file. " +
@@ -126,12 +147,6 @@ public class CMonitor {
 
         RunInstancesRequest runInstancesRequest =
                 new RunInstancesRequest();
-
-        String launchscript = "#!/bin/bash \n" +
-                "cd /home/ec2-user\n" +
-                "sudo echo " + credentials.getAWSAccessKeyId() + " > cred.txt\n"+
-                "sudo echo " + credentials.getAWSSecretKey() + " >> cred.txt\n"+
-                "./server.sh \n";
 
         runInstancesRequest.withImageId(imageid)
                 .withInstanceType(instancetype)

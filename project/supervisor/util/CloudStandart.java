@@ -8,7 +8,7 @@ import java.util.Scanner;
 
 public class CloudStandart {
 
-    public static String region = "eu-west-2";
+    public static String region = "us-east-1";
     public static int inbound_channel_port = 8088;
 
     public static String ami = "ami-03325428ec24a6273";
@@ -38,6 +38,9 @@ public class CloudStandart {
                             break;
                         case "INSTANCETYPE":
                             instancetype = args[1];
+                            break;
+                        case "REGION":
+                            region = args[1];
                             break;
                         case "PORT":
                             inbound_channel_port = Integer.parseInt(args[1]);
