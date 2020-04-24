@@ -10,6 +10,6 @@ rm instrumented/pt/ulisboa/tecnico/cnv/solver/*class
 
 rm tools/*class
 
-rm bin/*.db
+#rm bin/*.db
 
-rm compile.err
+#rm compile.err
