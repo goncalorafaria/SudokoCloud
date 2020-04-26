@@ -2,6 +2,8 @@ import BIT.highBIT.ClassInfo;
 
 import supervisor.server.CNode;
 import supervisor.storage.LocalStorage;
+import supervisor.storage.TaskStorage;
+import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
 import java.util.Enumeration;
@@ -44,17 +46,21 @@ public class ILoad {
     }
 
     public static void start(int incr){
-        Logger.publish(true,true);
-        LocalStorage.init();
+        //Logger.publish(true,true);
+
+        CloudStandart.init();
+
+        TaskStorage.init(true);
+
         CNode.init();
 
         //ICount.init();
-        Logger.log("start");
+        //Logger.log("start");
     }
 
     public static void termination(int incr){
         CNode.terminate();
-        Logger.log("terminated");
+        //Logger.log("terminated");
     }
 
 }
