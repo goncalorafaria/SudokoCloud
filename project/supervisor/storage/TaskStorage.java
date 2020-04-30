@@ -1,19 +1,17 @@
 package supervisor.storage;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.QueryRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import supervisor.server.Count;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class TaskStorage extends RemoteStorage {
 
     public TaskStorage() {
-        super("RequestTable", "task");
+        super("RequestTable", "task");//,"classe","un");
     }
 
     @Override
@@ -31,8 +29,9 @@ public class TaskStorage extends RemoteStorage {
 
 
     public List<Map<String, String>> queryMetrics(String method,String n1,String n2){
-
+        super.setup();
         Map<String, String> expressionAttributesNames = new HashMap<>();
+        /* **
         expressionAttributesNames.put("#classe", "classe");
 
         Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
@@ -55,7 +54,42 @@ public class TaskStorage extends RemoteStorage {
                 );
             l.add(it);
         }
+        */
 
+        return new ArrayList<>();
+    }
+
+    public List<Map<String, String>> getAll(){
+        super.setup();
+
+        List<Map<String, String>> l = new ArrayList<>();
+        Table r = new Table( dynamoDB, table);
+
+        try {
+            ItemCollection<ScanOutcome> items = r.scan(new ScanSpec());
+
+            Iterator<Item> iter = items.iterator();
+            while (iter.hasNext()) {
+                Item item = iter.next();
+                Map<String, String> it = new HashMap<>();
+                for (Map.Entry<String, Object> tp :item.asMap().entrySet()) {
+                    String av = (String) tp.getValue();
+                    it.put(
+                            tp.getKey(),
+                            av
+                    );
+                    l.add(it);
+                    //System.out.println(av);
+                }
+            }
+        }
+        catch (Exception e) {
+            System.err.println("Unable to scan the table:");
+            System.err.println(e.getMessage());
+        }
         return l;
     }
-}
+
+    }
+
+

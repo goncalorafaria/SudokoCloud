@@ -170,7 +170,8 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private Socket sc;
-        private PrintWriter out;
+        private PrintWriter out=null;
+        private BlockingQueue<String> lbq = new LinkedBlockingQueue<>();
 
         public EndPoint() {
             this.start();
@@ -178,16 +179,28 @@ public class CNode {
 
         public void increment() {
             //Logger.log("Increment");
-            this.out.println(1);
-            this.out.flush();
+
+            lbq.add("1");
+            this.flush();
         }
 
         public void decrement() {
             //Logger.log("Decrement");
-            this.out.println(-1);
-            this.out.flush();
+            lbq.add("-1");
+            this.flush();
         }
 
+        private void flush(){
+            if( out != null ){
+                try {
+                    this.out.println(
+                            lbq.take()
+                    );
+                    this.out.flush();
+                }catch (InterruptedException e){
+                }
+            }
+        }
         public void run() {
             try {
                 this.sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
