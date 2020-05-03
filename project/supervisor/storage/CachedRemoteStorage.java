@@ -4,18 +4,27 @@ package supervisor.storage;
 import com.amazonaws.AmazonClientException;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CachedRemoteStorage extends RemoteStorage{
     
+    public static ConcurrentHashMap<String,Map<String, String>> cache = new ConcurrentHashMap<String,Map<String, String>>();
+    
     public CachedRemoteStorage(String table, String key) {
         super(table, key);
+    }
+    
+    public CachedRemoteStorage(String table, String key, String aggregation, String range) {
+        super(table, key, aggregation, range);
     }
     
     public static void init(boolean instance) throws AmazonClientException {
         RemoteStorage.init(instance);
     }
 
-    private void setup() {
+    @Override
+    void setup() {
+        super.setup();
         
     }
 
@@ -24,21 +33,31 @@ public class CachedRemoteStorage extends RemoteStorage{
         return super.describe();
     }
 
+    // TODO this will change depending on how we aggregate the values
     @Override
     public void put(String key, Map<String, String> newItem) {
         super.put(key, newItem);
+        cache.put(key, newItem);
     }
 
     @Override
     public void destroy() {
         super.destroy();
+        cache.clear();
     }
 
     @Override
     public Map<String, String> get(String key) {
-        return super.get(key);
+        Map<String, String> value = cache.get(key);
+        if (value==null){
+            return super.get(key);
+        } else {
+            System.out.println("get "+key);
+            return value;
+        }
     }
 
+    // to be sure we have all the keys this needs to be remote
     @Override
     public Set<String> keys() {
         return super.keys();
@@ -46,8 +65,10 @@ public class CachedRemoteStorage extends RemoteStorage{
 
     @Override
     public boolean contains(String key) {
-        // TODO
-        return super.contains(key);
+        if (!cache.contains(key))
+            return super.contains(key);
+        else
+            return true;
     }
     
 }
