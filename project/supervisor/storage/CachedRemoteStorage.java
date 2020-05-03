@@ -40,13 +40,26 @@ public class CachedRemoteStorage extends RemoteStorage{
     public Map<String, String> get(String key) {
         Map<String, String> value = cache.get(key);
         if (value==null){
-            return super.get(key);
+            return forceGet(key);
         } else {
             System.out.println("get "+key);
             return value;
         }
     }
 
+
+    public Map<String, String> forceGet(String key) {
+        Map<String, String> value = super.get(key);
+        aggregate(value);
+        return value;
+    }
+    
+    
+    //TODO
+    private void aggregate(Map<String, String> value){
+        
+    }
+    
     // to be sure we have all the keys this needs to be remote
     @Override
     public Set<String> keys() {
