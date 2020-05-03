@@ -78,7 +78,7 @@ public class RemoteStorage implements Storage<String> {
         }
     }
 
-    private void setup() {
+    void setup() {
         boolean rd = false;
 
         while (!rd) {
