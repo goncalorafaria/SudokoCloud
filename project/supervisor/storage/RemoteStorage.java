@@ -41,50 +41,6 @@ public class RemoteStorage implements Storage<String> {
 
     }
 
-    public RemoteStorage(String table, String key, String aggregation, String range) {
-        this.table = table;
-        this.key = key;
-        // Create a table with a primary hash key named 'name', which holds a string
-        CreateTableRequest createTableRequest = new CreateTableRequest();
-        createTableRequest.withTableName(table);
-        createTableRequest.withKeySchema(new KeySchemaElement().
-                withAttributeName(this.key).withKeyType(KeyType.HASH));
-
-        LocalSecondaryIndex lsi = new LocalSecondaryIndex()
-                .withIndexName(aggregation + "Index");
-
-        List<KeySchemaElement> lks = new ArrayList<KeySchemaElement>(2);
-
-        lks.add(new KeySchemaElement()
-                .withAttributeName(aggregation)
-                .withKeyType(KeyType.HASH));
-
-        lks.add(new KeySchemaElement()
-                 .withAttributeName(range)
-                .withKeyType(KeyType.RANGE));
-
-        lsi.withKeySchema(lks).withProjection(new Projection()
-                        .withProjectionType(
-                                ProjectionType.ALL));
-
-        createTableRequest.withLocalSecondaryIndexes(lsi);
-
-        createTableRequest
-                    .withAttributeDefinitions(new AttributeDefinition().
-                withAttributeName(this.key).withAttributeType(ScalarAttributeType.S))
-                    .withAttributeDefinitions(new AttributeDefinition().
-                withAttributeName(aggregation).withAttributeType(ScalarAttributeType.S))
-                    .withAttributeDefinitions(new AttributeDefinition().
-                withAttributeName(range).withAttributeType(ScalarAttributeType.S));
-
-        createTableRequest.withProvisionedThroughput(new ProvisionedThroughput().
-                withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
-
-        // Create table if it does not exist yet
-        TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
-
-    }
-
     public static void init(boolean instance) throws AmazonClientException {
 
         try {

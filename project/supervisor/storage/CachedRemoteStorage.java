@@ -14,18 +14,8 @@ public class CachedRemoteStorage extends RemoteStorage{
         super(table, key);
     }
     
-    public CachedRemoteStorage(String table, String key, String aggregation, String range) {
-        super(table, key, aggregation, range);
-    }
-    
     public static void init(boolean instance) throws AmazonClientException {
         RemoteStorage.init(instance);
-    }
-
-    @Override
-    void setup() {
-        super.setup();
-        
     }
 
     @Override
