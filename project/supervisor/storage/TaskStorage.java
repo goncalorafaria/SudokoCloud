@@ -8,7 +8,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 
 import java.util.*;
 
-public class TaskStorage extends RemoteStorage {
+public class TaskStorage extends CachedRemoteStorage {
 
     public TaskStorage() {
         super("RequestTable", "task");//,"classe","un");
