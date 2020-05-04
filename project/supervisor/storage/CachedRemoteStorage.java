@@ -34,20 +34,19 @@ public class CachedRemoteStorage extends RemoteStorage{
         cache.clear();
     }
 
+    /**
+     * TODO: Requires a more sophisticated policy for reusing values.
+     * - something similar with UCB maybe.
+     * */
     @Override
     public Map<String, String> get(String key) {
         Map<String, String> value = cache.get(key);
         if (value==null){
-            return forceGet(key);
+            return super.get(key);
         } else {
             System.out.println("get "+key);
             return value;
         }
-    }
-
-    public Map<String, String> forceGet(String key) {
-        Map<String, String> value = super.get(key);
-        return value;
     }
     
     // to be sure we have all the keys this needs to be remote

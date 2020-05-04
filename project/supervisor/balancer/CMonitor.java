@@ -13,7 +13,6 @@ import com.amazonaws.util.Base64;
 import supervisor.storage.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
 import supervisor.storage.Storage;
-import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
 
 import java.io.BufferedReader;
@@ -94,8 +93,11 @@ public class CMonitor {
                     e);
         }
 
+        CachedRemoteStorage.init(false);
+
         CMonitor.requestTable = new CachedRemoteStorage(
-                TaskStorage.tablename,TaskStorage.tablekey);
+                CloudStandart.taskStorage_tablename,
+                CloudStandart.taskStorage_tablekey);
     }
 
     /**

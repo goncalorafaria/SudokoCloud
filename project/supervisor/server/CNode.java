@@ -40,6 +40,8 @@ public class CNode {
     /** Initializes storage, workers and communication channel with balancer. */
     public static void init() {
 
+        TaskStorage.init(true);
+
         CNode.requestTable = new TaskStorage();
 
         CNode.worker = new Publisher();
