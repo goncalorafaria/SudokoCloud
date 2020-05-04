@@ -205,7 +205,10 @@ public class RemoteStorage implements Storage<String> {
                     tp.getValue().getS()
             );
 
-        return it;
+        if( it.size() == 0 )
+            return null;
+        else
+            return it;
     }
 
     @Override
