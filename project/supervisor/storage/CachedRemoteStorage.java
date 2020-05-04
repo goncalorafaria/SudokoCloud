@@ -7,14 +7,22 @@ import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
+import supervisor.util.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CachedRemoteStorage extends RemoteStorage{
-    
-    public static ConcurrentHashMap<String,Map<String, String>> cache = new ConcurrentHashMap<String,Map<String, String>>();
-    
+
+    /* cache for a single table */
+    private ConcurrentHashMap<String,Map<String, String>> cache =
+            new ConcurrentHashMap<>();
+
+    private ConcurrentHashMap<String, ConcurrentLinkedDeque<AtomicInteger>> hittable =
+            new ConcurrentHashMap<>();
+
     public CachedRemoteStorage(String table, String key) {
         super(table, key);
     }
@@ -42,11 +50,48 @@ public class CachedRemoteStorage extends RemoteStorage{
     public Map<String, String> get(String key) {
         Map<String, String> value = cache.get(key);
         if (value==null){
-            return super.get(key);
+            // miss
+            value = super.get(key);
+            ConcurrentLinkedDeque<AtomicInteger> list = new ConcurrentLinkedDeque<>();
+            list.addFirst(new AtomicInteger(1));
+            list.addLast(new AtomicInteger(1));
+            cache.put(key,value);
+            hittable.put(key,list);
+            return value;
         } else {
+            // hit
+            AtomicInteger refreshc, totalc;
+            refreshc = hittable.get(key).getFirst();
+            totalc = hittable.get(key).getLast();
+
+            value = this.updatePolicy(
+                    refreshc,
+                    totalc,
+                    value,
+                    key);
+
+            totalc.addAndGet(1);
             System.out.println("get "+key);
             return value;
         }
+    }
+
+    private Map<String,String> updatePolicy(
+            AtomicInteger refreshc,
+            AtomicInteger totalc,
+            Map<String,String> value,
+            String key){
+
+            // sqrt( 2.4 * log(total)/ refreshc ) >= 1
+            if( Math.sqrt(2.4*Math.log(totalc.get())/refreshc.get()) >= 1 ){
+                // updating cache.
+                value = super.get(key);
+                cache.put(key,value);
+                refreshc.addAndGet(1);
+                Logger.log("Updating the cache for:  " + key);
+            }
+
+        return value;
     }
     
     // to be sure we have all the keys this needs to be remote
