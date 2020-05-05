@@ -18,6 +18,7 @@ public class CachedRemoteStorage extends RemoteStorage{
         private final AtomicInteger hitc=new AtomicInteger(1);
         private final AtomicInteger updatec=new AtomicInteger(1);
         private final AtomicInteger totalc=new AtomicInteger(1);
+
         private final double base;
 
         StochasticBaditProblem(double base){
