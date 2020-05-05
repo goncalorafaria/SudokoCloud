@@ -6,10 +6,14 @@ import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
+import supervisor.server.Count;
+import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CachedRemoteStorage extends RemoteStorage{
@@ -54,16 +58,17 @@ public class CachedRemoteStorage extends RemoteStorage{
     private ConcurrentHashMap<String,Map<String, String>> cache =
             new ConcurrentHashMap<>();
 
-    private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
+    private Map<String,Map<String,Set<String>>> cachetree =
+            new ConcurrentHashMap<>();
 
+    private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
             new ConcurrentHashMap<>();
 
     public CachedRemoteStorage(String table, String key) {
         super(table, key);
-    }
-    
-    public static void init(boolean instance) throws AmazonClientException {
-        RemoteStorage.init(instance);
+        cachetree.put("BFS", new ConcurrentHashMap<String,Set<String>>());
+        cachetree.put("DLX", new ConcurrentHashMap<String,Set<String>>());
+        cachetree.put("CP", new ConcurrentHashMap<String,Set<String>>());
     }
 
     @Override
@@ -89,7 +94,8 @@ public class CachedRemoteStorage extends RemoteStorage{
             if(value==null)
                 return null;
 
-            cache.put(key,value);
+            this.cacheput(key,value);
+
             hittable.put(key, new StochasticBaditProblem(0.1));
             return value;
         } else {
@@ -103,6 +109,133 @@ public class CachedRemoteStorage extends RemoteStorage{
         }
     }
 
+    private void cacheput(String key, Map<String, String> value){
+        cache.put(key,value);
+
+        String[] sv = key.split(":");
+        //String classe = sv[0] + ":" + sv[2] + ":" + sv[3];
+        String solver = sv[0];
+        String board = sv[2] + ":" + sv[3];
+        String un = sv[1];
+
+        Map<String,Set<String>> solvert =  cachetree.get(solver);
+
+        if( !solvert.containsKey(board) ){
+            solvert.put(board, new ConcurrentSkipListSet<String>());
+        }
+
+        solvert.get(board).add(un);
+    }
+
+    private boolean cachecontains( String solver, String board ){
+
+        if( cachetree.containsKey(solver) ){
+            return cachetree.get(solver).containsKey(board);
+        }
+
+        return false;
+    }
+
+    private double linint(double x0,double y0, double x1, double y1, double x ){
+        return y0 + (x- x0)*(y1 - y0)/(x1 - x0);
+    }
+
+    public double estimate(String key){
+
+        double est=0.0;
+
+        String[] sv = key.split(":");
+        String solver = sv[0];
+        String un = sv[1];
+        String board = sv[2] + ":" + sv[3];
+
+        try {
+            Map<String, String> v = this.get(key);
+            if (v == null) {
+                // was never performed.
+                if( this.cachecontains(solver,board) ){
+                    // has classe element.
+                    Set<String> ks = cachetree.get(solver).get(board);
+
+                    if( ks.size() > 1 && !solver.equals("DLX") ){
+                        // more than 2 sizes.
+                        int target = Integer.parseInt(un);
+                        int before = Integer.MIN_VALUE;
+                        int after = Integer.MAX_VALUE;
+
+                        for( String k : ks){
+                            int candidate = Integer.parseInt(k);
+                            if( candidate < target ){
+                                if( before < candidate )
+                                    before = candidate;
+                            }else{
+                                if( candidate < after )
+                                    after = candidate;
+                            }
+                        }
+
+                        if(before == Integer.MIN_VALUE || after == Integer.MAX_VALUE){
+                            // chooses closet.
+                            int choice;
+                            if( before == Integer.MIN_VALUE ){
+                                choice = after;
+                            }else{
+                                choice = before;
+                            }
+                            Count c = Count.fromString(
+                                    cache.get(solver+":"+choice+":"+board)
+                                            .get("Count"));
+
+                            est = c.mean() + Math.sqrt(c.var());
+                        }
+                        else{
+                            // does linear interpolation.
+                            Count cbefore = Count.fromString(
+                                    cache.get(solver+":"+before+":"+board)
+                                            .get("Count"));
+
+                            Count cafter  = Count.fromString(
+                                    cache.get(solver+":"+after+":"+board)
+                                            .get("Count"));
+
+                            est = this.linint((double)before,
+                                    cbefore.mean(),
+                                    (double)after,
+                                    cafter.mean(),
+                                    (double)target);
+
+                            est += Math.sqrt(Math.max(cafter.var(),cbefore.var()));
+                        }
+
+                    }
+                    else{
+                        String kclose = ks.iterator().next();
+                        v = this.get(solver+":"+kclose+":"+board);
+                        Count c = Count.fromString(v.get("Count"));
+                        est = c.mean() + Math.sqrt(c.var());
+                    }
+                }
+                else{
+                    // does not have class elements.
+                    est = 4000.0;
+                }
+
+            }
+            else {
+                // was already performed.
+                Count c = Count.fromString(v.get("Count"));
+                est = c.mean() + Math.sqrt(c.var());
+            }
+
+        }catch (IOException e){
+            Logger.log(e.toString());
+        }catch (ClassNotFoundException e){
+            Logger.log(e.toString());
+        }
+
+        return est;
+    }
+
     private Map<String,String> updatePolicy(
             StochasticBaditProblem ucb,
             Map<String,String> value,
@@ -113,7 +246,7 @@ public class CachedRemoteStorage extends RemoteStorage{
                 // updating cache.
                 ucb.update();
                 value = super.get(key);
-                cache.put(key,value);
+                this.cacheput(key,value);
                 Logger.log("Updating the cache for:  " + key);
             }else{
                 ucb.hit();
@@ -131,7 +264,7 @@ public class CachedRemoteStorage extends RemoteStorage{
 
     @Override
     public boolean contains(String key) {
-        if (!cache.contains(key))
+        if (!cache.containsKey(key))
             return super.contains(key);
         else
             return true;
