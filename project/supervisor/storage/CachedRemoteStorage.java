@@ -1,4 +1,3 @@
-
 package supervisor.storage;
 
 import com.amazonaws.AmazonClientException;
@@ -96,7 +95,6 @@ public class CachedRemoteStorage extends RemoteStorage{
                     value,
                     key);
 
-            System.out.println("get "+key);
             return value;
         }
     }
@@ -115,6 +113,7 @@ public class CachedRemoteStorage extends RemoteStorage{
                 Logger.log("Updating the cache for:  " + key);
             }else{
                 ucb.hit();
+                Logger.log("Hit on cache with: " + key);
             }
 
         return value;
