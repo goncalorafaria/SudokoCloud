@@ -129,6 +129,8 @@ public class CachedRemoteStorage extends RemoteStorage{
 
     private boolean cachecontains( String solver, String board ){
 
+        //Logger.log(solver+"+"+board);
+
         if( cachetree.containsKey(solver) ){
             return cachetree.get(solver).containsKey(board);
         }
@@ -140,14 +142,9 @@ public class CachedRemoteStorage extends RemoteStorage{
         return y0 + (x- x0)*(y1 - y0)/(x1 - x0);
     }
 
-    public double estimate(String key){
+    private double estimateBranchesTaken(String key, String solver, String un, String board){
 
         double est=0.0;
-
-        String[] sv = key.split(":");
-        String solver = sv[0];
-        String un = sv[1];
-        String board = sv[2] + ":" + sv[3];
 
         try {
             Map<String, String> v = this.get(key);
@@ -156,6 +153,7 @@ public class CachedRemoteStorage extends RemoteStorage{
                 if( this.cachecontains(solver,board) ){
                     // has classe element.
                     Set<String> ks = cachetree.get(solver).get(board);
+                    //Logger.log(">>>>>>>> contains: " + ks);
 
                     if( ks.size() > 1 && !solver.equals("DLX") ){
                         // more than 2 sizes.
@@ -216,10 +214,10 @@ public class CachedRemoteStorage extends RemoteStorage{
                     }
                 }
                 else{
+                    //Logger.log(">>>>>>>> does not contain");
                     // does not have class elements.
                     est = 4000.0;
                 }
-
             }
             else {
                 // was already performed.
@@ -236,6 +234,31 @@ public class CachedRemoteStorage extends RemoteStorage{
         return est;
     }
 
+    public double estimate(String key){
+
+        String[] sv = key.split(":");
+        String solver = sv[0];
+        String un = sv[1];
+        String board = sv[2] + ":" + sv[3];
+
+        double est = estimateBranchesTaken(key,solver,un,board);
+
+        switch (solver){
+            case "BFS":
+                est = est*12.88852179+14068.78484095;
+                break;
+            case "CP":
+                est = est*14.16131419+19312.86569091;
+                break;
+            case "DLX":
+                est = est*24.39689662-1392680.19952047;
+                break;
+        }
+        if( est < 0 ){
+            est = 400000*24.39689662 - 1392680.19952047;
+        }
+        return est;
+    }
     private Map<String,String> updatePolicy(
             StochasticBaditProblem ucb,
             Map<String,String> value,
@@ -252,7 +275,6 @@ public class CachedRemoteStorage extends RemoteStorage{
                 ucb.hit();
                 Logger.log("Hit on cache with: " + key);
             }
-
         return value;
     }
     
