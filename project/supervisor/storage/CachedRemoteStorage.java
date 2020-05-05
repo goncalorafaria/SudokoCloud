@@ -1,4 +1,3 @@
-
 package supervisor.storage;
 
 import com.amazonaws.AmazonClientException;
@@ -16,11 +15,47 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class CachedRemoteStorage extends RemoteStorage{
 
+    static class StochasticBaditProblem {
+        private AtomicInteger hitc=new AtomicInteger(1);
+        private AtomicInteger updatec=new AtomicInteger(1);
+        private AtomicInteger totalc=new AtomicInteger(1);
+        private final double base;
+
+        StochasticBaditProblem(double base){
+            this.base = base;
+        }
+
+        void hit(){
+            hitc.addAndGet(1);
+            totalc.addAndGet(1);
+        }
+
+        void update(){
+            updatec.addAndGet(1);
+            totalc.addAndGet(1);
+        }
+
+        double hitScore(){
+            return base + Math.sqrt(2*Math.log(totalc.get())/hitc.get());
+        }
+
+        double updateScore(){
+            return Math.sqrt(2*Math.log(totalc.get())/hitc.get());
+        }
+
+        boolean shouldUpdate(){
+            double a = hitScore();
+            double b = updateScore();
+
+            return (b >= a);
+        }
+    }
     /* cache for a single table */
     private ConcurrentHashMap<String,Map<String, String>> cache =
             new ConcurrentHashMap<>();
 
-    private ConcurrentHashMap<String, ConcurrentLinkedDeque<AtomicInteger>> hittable =
+    private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
+
             new ConcurrentHashMap<>();
 
     public CachedRemoteStorage(String table, String key) {
@@ -43,8 +78,6 @@ public class CachedRemoteStorage extends RemoteStorage{
     }
 
     /**
-     * TODO: Requires a more sophisticated policy for reusing values.
-     * - something similar with UCB maybe.
      * */
     @Override
     public Map<String, String> get(String key) {
@@ -52,43 +85,35 @@ public class CachedRemoteStorage extends RemoteStorage{
         if (value==null){
             // miss
             value = super.get(key);
-            ConcurrentLinkedDeque<AtomicInteger> list = new ConcurrentLinkedDeque<>();
-            list.addFirst(new AtomicInteger(1));
-            list.addLast(new AtomicInteger(1));
             cache.put(key,value);
-            hittable.put(key,list);
+            hittable.put(key, new StochasticBaditProblem(0.1));
             return value;
         } else {
             // hit
-            AtomicInteger refreshc, totalc;
-            refreshc = hittable.get(key).getFirst();
-            totalc = hittable.get(key).getLast();
-
             value = this.updatePolicy(
-                    refreshc,
-                    totalc,
+                    hittable.get(key),
                     value,
                     key);
 
-            totalc.addAndGet(1);
-            System.out.println("get "+key);
             return value;
         }
     }
 
     private Map<String,String> updatePolicy(
-            AtomicInteger refreshc,
-            AtomicInteger totalc,
+            StochasticBaditProblem ucb,
             Map<String,String> value,
             String key){
 
-            // sqrt( 2.4 * log(total)/ refreshc ) >= 1
-            if( Math.sqrt(2.4*Math.log(totalc.get())/refreshc.get()) >= 1 ){
+            // sqrt( 2 * log(total)/ refreshc ) >= 1
+            if( ucb.shouldUpdate() ){
                 // updating cache.
+                ucb.update();
                 value = super.get(key);
                 cache.put(key,value);
-                refreshc.addAndGet(1);
                 Logger.log("Updating the cache for:  " + key);
+            }else{
+                ucb.hit();
+                Logger.log("Hit on cache with: " + key);
             }
 
         return value;

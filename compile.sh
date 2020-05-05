@@ -3,12 +3,18 @@ echo "Starting the compilation process"
 # configure aws, java 7 and add everything to filepath.
 source dependencies.sh
 
-# actually compile
+#actually compile
+#javac -Xlint:unchecked tools/*.java
+#javac -Xlint:unchecked project/supervisor/balancer/*.java
+#javac -Xlint:unchecked project/supervisor/server/*.java 
+#javac -Xlint:unchecked project/supervisor/storage/*.java 
+#javac -Xlint:unchecked project/supervisor/util/*.java
+
 javac tools/*.java
 javac project/supervisor/balancer/*.java
 javac project/supervisor/server/*.java 
 javac project/supervisor/storage/*.java 
-javac project/supervisor/util/*.java
+javac project/supervisor/util/*.java   
 
 # Making sure the folders required by the instrumentation exist
 mkdir -p $PWD/instrumented/pt/ulisboa/tecnico/cnv/solver/
