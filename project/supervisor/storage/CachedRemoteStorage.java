@@ -85,6 +85,10 @@ public class CachedRemoteStorage extends RemoteStorage{
         if (value==null){
             // miss
             value = super.get(key);
+
+            if(value==null)
+                return null;
+
             cache.put(key,value);
             hittable.put(key, new StochasticBaditProblem(0.1));
             return value;

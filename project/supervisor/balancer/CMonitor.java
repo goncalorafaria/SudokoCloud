@@ -215,10 +215,10 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
-        //Logger.log("contains :" + s + CMonitor.requestTable.contains(s));
-        //if (CMonitor.requestTable.contains(s)) {
-        //    Logger.log(CMonitor.requestTable.get(s).toString());
-        //}
+        Map<String,String> mss = CMonitor.requestTable.get(s);
+        if( mss != null)
+            Logger.log(mss.toString());
+
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
