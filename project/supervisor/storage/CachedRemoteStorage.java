@@ -10,15 +10,14 @@ import supervisor.util.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CachedRemoteStorage extends RemoteStorage{
 
     static class StochasticBaditProblem {
-        private AtomicInteger hitc=new AtomicInteger(1);
-        private AtomicInteger updatec=new AtomicInteger(1);
-        private AtomicInteger totalc=new AtomicInteger(1);
+        private final AtomicInteger hitc=new AtomicInteger(1);
+        private final AtomicInteger updatec=new AtomicInteger(1);
+        private final AtomicInteger totalc=new AtomicInteger(1);
         private final double base;
 
         StochasticBaditProblem(double base){
@@ -40,7 +39,7 @@ public class CachedRemoteStorage extends RemoteStorage{
         }
 
         double updateScore(){
-            return Math.sqrt(2*Math.log(totalc.get())/hitc.get());
+            return Math.sqrt(2*Math.log(totalc.get())/updatec.get());
         }
 
         boolean shouldUpdate(){
