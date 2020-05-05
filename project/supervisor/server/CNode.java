@@ -126,7 +126,8 @@ public class CNode {
                         if (c.valid()) {
                             if (row.containsKey(mname)) {
                                 Count cold = Count.fromString(row.get(mname));
-                                c.aggregate(cold);
+                                cold.aggregate(c);
+                                c = cold;
                             }
                             row.put(mname, c.toBinary());
                         }
