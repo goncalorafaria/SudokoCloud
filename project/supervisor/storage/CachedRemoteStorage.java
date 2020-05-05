@@ -56,6 +56,7 @@ public class CachedRemoteStorage extends RemoteStorage{
             new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
+
             new ConcurrentHashMap<>();
 
     public CachedRemoteStorage(String table, String key) {
