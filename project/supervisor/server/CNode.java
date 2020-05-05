@@ -118,6 +118,7 @@ public class CNode {
                     if( row == null)
                         row = new HashMap<>();
 
+
                     for (String mname : itask.metricsK()) {
 
                         Metric m = itask.getMetric(mname);

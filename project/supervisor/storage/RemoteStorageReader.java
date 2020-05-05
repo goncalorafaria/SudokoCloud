@@ -17,7 +17,6 @@ public class RemoteStorageReader {
         CachedRemoteStorage a = new CachedRemoteStorage(
                 CloudStandart.taskStorage_tablename,
                 CloudStandart.taskStorage_tablekey);
-        //a.destroy();
 
         Map<String, Map<Integer, Count>> metrics = new HashMap<>();
         Map<String, Map<Integer, Count>> overhead = new HashMap<>();

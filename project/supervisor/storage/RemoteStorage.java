@@ -199,6 +199,9 @@ public class RemoteStorage implements Storage<String> {
 
         Map<String, String> it = new HashMap<>();
 
+        if( r == null || r.getItem() == null )
+            return null;
+
         for (Map.Entry<String, AttributeValue> tp : r.getItem().entrySet())
             it.put(
                     tp.getKey(),
