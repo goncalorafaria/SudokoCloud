@@ -12,7 +12,6 @@ import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
 import supervisor.storage.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
-import supervisor.storage.Storage;
 import supervisor.util.Logger;
 
 import java.io.BufferedReader;
@@ -48,7 +47,7 @@ public class CMonitor {
     private static final Map<String, CMonitor.Endpoint> vmstates = new ConcurrentSkipListMap<>();
 
     /* Storage persistente que guarda o historico das metricas para cada pedido. */
-    private static Storage<String> requestTable;
+    private static CachedRemoteStorage requestTable;
 
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
     private final static Set<String> activevms = new ConcurrentSkipListSet<>();
@@ -215,10 +214,9 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
-        Map<String,String> mss = CMonitor.requestTable.get(s);
-        if( mss != null)
-            Logger.log(mss.toString());
-
+        Logger.log("branch count estimate: " +
+                CMonitor.requestTable.estimate(s)
+        );
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());

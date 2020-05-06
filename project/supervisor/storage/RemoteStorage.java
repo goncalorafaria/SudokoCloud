@@ -12,7 +12,6 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import supervisor.util.CloudStandart;
-import supervisor.util.Logger;
 
 import java.io.File;
 import java.util.*;
@@ -40,7 +39,7 @@ public class RemoteStorage implements Storage<String> {
         TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
 
     }
-
+    /**
     public RemoteStorage(String table, String key, String aggregation, String range) {
         this.table = table;
         this.key = key;
@@ -84,6 +83,7 @@ public class RemoteStorage implements Storage<String> {
         TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
 
     }
+     **/
 
     public static void init(boolean instance) throws AmazonClientException {
 
@@ -162,22 +162,6 @@ public class RemoteStorage implements Storage<String> {
             );
 
         PutItemResult r = dynamoDB.putItem(new PutItemRequest(table, item));
-        //Logger.log("put result: " + r.toString());
-        // Starting tmp
-
-        /*
-        HashMap<String, Condition> scanFilter = new HashMap<>();
-        Condition condition = new Condition()
-                .withComparisonOperator(ComparisonOperator.GT.toString())
-                .withAttributeValueList(new AttributeValue().withN("2000"));
-
-        scanFilter.put("year", condition);
-
-        ScanRequest scanRequest = new ScanRequest(table).withScanFilter(scanFilter);
-        ScanResult scanResult = dynamoDB.scan(scanRequest);
-        System.out.println("Result: " + scanResult);
-
-        */
 
     }
 

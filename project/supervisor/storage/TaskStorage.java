@@ -24,6 +24,12 @@ public class TaskStorage extends RemoteStorage {
         super.put(key, newItem);
     }
 
+    public static String extractClase(String key){
+        String[] sv = key.split(":");
+        String classe = sv[0] + ":" + sv[2] + ":" + sv[3];
+        return classe;
+    }
+
     }
 
 
