@@ -1,13 +1,11 @@
 package supervisor.storage;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import supervisor.server.Count;
-import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
 import java.io.IOException;
@@ -95,7 +93,6 @@ public class CachedRemoteStorage extends RemoteStorage{
                 return null;
 
             this.cacheput(key,value);
-
             hittable.put(key, new StochasticBaditProblem(0.1));
             return value;
         } else {

@@ -12,7 +12,6 @@ import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
 import supervisor.storage.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
-import supervisor.storage.Storage;
 import supervisor.util.Logger;
 
 import java.io.BufferedReader;
