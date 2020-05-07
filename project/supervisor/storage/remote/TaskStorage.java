@@ -1,4 +1,4 @@
-package supervisor.storage;
+package supervisor.storage.remote;
 
 import supervisor.util.CloudStandart;
 

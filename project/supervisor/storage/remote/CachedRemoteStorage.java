@@ -1,4 +1,4 @@
-package supervisor.storage;
+package supervisor.storage.remote;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
@@ -53,10 +53,10 @@ public class CachedRemoteStorage extends RemoteStorage{
         }
     }
     /* cache for a single table */
-    private ConcurrentHashMap<String,Map<String, String>> cache =
+    ConcurrentHashMap<String,Map<String, String>> cache =
             new ConcurrentHashMap<>();
 
-    private Map<String,Map<String,Set<String>>> cachetree =
+    Map<String,Map<String,Set<String>>> cachetree =
             new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
@@ -124,7 +124,7 @@ public class CachedRemoteStorage extends RemoteStorage{
         solvert.get(board).add(un);
     }
 
-    private boolean cachecontains( String solver, String board ){
+    boolean cachecontains( String solver, String board ){
 
         //Logger.log(solver+"+"+board);
 
@@ -135,127 +135,8 @@ public class CachedRemoteStorage extends RemoteStorage{
         return false;
     }
 
-    private double linint(double x0,double y0, double x1, double y1, double x ){
-        return y0 + (x- x0)*(y1 - y0)/(x1 - x0);
-    }
 
-    private double estimateBranchesTaken(String key, String solver, String un, String board){
 
-        double est=0.0;
-
-        try {
-            Map<String, String> v = this.get(key);
-            if (v == null) {
-                // was never performed.
-                if( this.cachecontains(solver,board) ){
-                    // has classe element.
-                    Set<String> ks = cachetree.get(solver).get(board);
-                    //Logger.log(">>>>>>>> contains: " + ks);
-
-                    if( ks.size() > 1 && !solver.equals("DLX") ){
-                        // more than 2 sizes.
-                        int target = Integer.parseInt(un);
-                        int before = Integer.MIN_VALUE;
-                        int after = Integer.MAX_VALUE;
-
-                        for( String k : ks){
-                            int candidate = Integer.parseInt(k);
-                            if( candidate < target ){
-                                if( before < candidate )
-                                    before = candidate;
-                            }else{
-                                if( candidate < after )
-                                    after = candidate;
-                            }
-                        }
-
-                        if(before == Integer.MIN_VALUE || after == Integer.MAX_VALUE){
-                            // chooses closet.
-                            int choice;
-                            if( before == Integer.MIN_VALUE ){
-                                choice = after;
-                            }else{
-                                choice = before;
-                            }
-                            Count c = Count.fromString(
-                                    cache.get(solver+":"+choice+":"+board)
-                                            .get("Count"));
-
-                            est = c.mean() + Math.sqrt(c.var());
-                        }
-                        else{
-                            // does linear interpolation.
-                            Count cbefore = Count.fromString(
-                                    cache.get(solver+":"+before+":"+board)
-                                            .get("Count"));
-
-                            Count cafter  = Count.fromString(
-                                    cache.get(solver+":"+after+":"+board)
-                                            .get("Count"));
-
-                            est = this.linint((double)before,
-                                    cbefore.mean(),
-                                    (double)after,
-                                    cafter.mean(),
-                                    (double)target);
-
-                            est += Math.sqrt(Math.max(cafter.var(),cbefore.var()));
-                        }
-
-                    }
-                    else{
-                        String kclose = ks.iterator().next();
-                        v = this.get(solver+":"+kclose+":"+board);
-                        Count c = Count.fromString(v.get("Count"));
-                        est = c.mean() + Math.sqrt(c.var());
-                    }
-                }
-                else{
-                    //Logger.log(">>>>>>>> does not contain");
-                    // does not have class elements.
-                    est = 4000.0;
-                }
-            }
-            else {
-                // was already performed.
-                Count c = Count.fromString(v.get("Count"));
-                est = c.mean() + Math.sqrt(c.var());
-            }
-
-        }catch (IOException e){
-            Logger.log(e.toString());
-        }catch (ClassNotFoundException e){
-            Logger.log(e.toString());
-        }
-
-        return est;
-    }
-
-    public double estimate(String key){
-
-        String[] sv = key.split(":");
-        String solver = sv[0];
-        String un = sv[1];
-        String board = sv[2] + ":" + sv[3];
-
-        double est = estimateBranchesTaken(key,solver,un,board);
-
-        switch (solver){
-            case "BFS":
-                est = est*12.88852179+14068.78484095;
-                break;
-            case "CP":
-                est = est*14.16131419+19312.86569091;
-                break;
-            case "DLX":
-                est = est*24.39689662-1392680.19952047;
-                break;
-        }
-        if( est < 0 ){
-            est = 400000*24.39689662 - 1392680.19952047;
-        }
-        return est;
-    }
     private Map<String,String> updatePolicy(
             StochasticBaditProblem ucb,
             Map<String,String> value,

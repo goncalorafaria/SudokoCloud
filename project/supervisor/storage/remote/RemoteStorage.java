@@ -1,4 +1,4 @@
-package supervisor.storage;
+package supervisor.storage.remote;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
@@ -15,6 +15,7 @@ import supervisor.util.CloudStandart;
 
 import java.io.File;
 import java.util.*;
+import supervisor.storage.Storage;
 
 public class RemoteStorage implements Storage<String> {
 

@@ -3,7 +3,7 @@ package supervisor.balancer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import supervisor.storage.CachedRemoteStorage;
+import supervisor.storage.remote.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
