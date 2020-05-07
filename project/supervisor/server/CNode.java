@@ -161,8 +161,12 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private PrintWriter out=null;
-        private final BlockingQueue<String> lbq = new LinkedBlockingQueue<>();
-        private final ConcurrentHashMap<Long, AtomicLong> deltaset = new ConcurrentHashMap<>();
+        private final BlockingQueue<String> lbq
+                = new LinkedBlockingQueue<>();
+
+        private final ConcurrentHashMap<Long, AtomicLong> deltaset
+                = new ConcurrentHashMap<>();
+
         public EndPoint() {
             this.start();
         }
