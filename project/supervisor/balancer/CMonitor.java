@@ -398,6 +398,7 @@ public class CMonitor {
                                     args[1]));
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
                     break;
+                default: Logger.log(args[0]);
             }
 
         }

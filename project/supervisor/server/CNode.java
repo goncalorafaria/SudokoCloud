@@ -2,6 +2,7 @@ package supervisor.server;
 
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
+import supervisor.util.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -47,6 +48,8 @@ public class CNode {
         CNode.worker.start();
 
         CNode.tunnel = new CNode.EndPoint();
+
+        Logger.publish(false,true);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -145,11 +148,11 @@ public class CNode {
                     requestTable.put(tsk, row);
 
                 } catch (InterruptedException e) {
-                    //Logger.log(e.getMessage());
+                    Logger.log(e.getMessage());
                 } catch (IOException e) {
-                    //Logger.log(e.getMessage());
+                    Logger.log(e.getMessage());
                 } catch (ClassNotFoundException e) {
-                    //Logger.log(e.getMessage());
+                    Logger.log(e.getMessage());
                 }
             }
 
@@ -211,7 +214,7 @@ public class CNode {
         public void decrement(long tid, long load) {
             lbq.add("queue:"+"-1");
 
-            this.senddelta(tid,load);
+            senddelta(tid,load);
             deltaset.remove(tid);
         }
 
@@ -237,10 +240,9 @@ public class CNode {
                 //Logger.log("Tunnel open");
 
             } catch (UnknownHostException e) {
-                //Logger.log(e.toString());
+                Logger.log(e.toString());
             } catch (IOException e) {
-                //Logger.log(e.toString());
-
+                Logger.log(e.toString());
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
