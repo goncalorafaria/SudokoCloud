@@ -17,6 +17,7 @@ import supervisor.util.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Thread.sleep;
 
@@ -299,6 +301,8 @@ public class CMonitor {
         private BufferedReader in;
         private Socket sc;
 
+        private AtomicLong load = new AtomicLong(0L);
+
         public Endpoint(String vm) {
             this.vm = vm;
             this.start();
@@ -312,6 +316,13 @@ public class CMonitor {
             return this.qsize.get() - o.qsize.get();
         }
 
+        public long getLoad(){ return load.get();}
+
+        public void scheduleLoad(double l) { load.addAndGet((long)l); }
+
+        private void discountLoad(long l){
+            load.addAndGet(-l);
+        }
         public void recall() {
             CMonitor.activevms.remove(vm);
             this.active.getAndSet(false);
@@ -369,11 +380,23 @@ public class CMonitor {
         }
 
         private void fetching() throws IOException {
-            this.qsize.getAndAdd(
-                    Integer.parseInt(
-                            in.readLine()));
+            String[] args = in.readLine().split(":");
 
-            Logger.log("<" + this.vm + ">" + this.qsize.get());
+            switch (args[0]){
+                case "queue" :
+                    this.qsize.getAndAdd(
+                            Integer.parseInt(
+                                    args[1]));
+                    Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.qsize.get());
+                    break;
+                case "loadreport" :
+                    this.discountLoad(
+                            Long.parseLong(
+                                    args[1]));
+                    Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
+                    break;
+            }
+
         }
 
         private boolean calling() {

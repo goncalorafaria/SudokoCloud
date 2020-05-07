@@ -11,10 +11,9 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class CNode {
     /**
@@ -66,7 +65,8 @@ public class CNode {
 
             activetasks.put(Thread.currentThread().getId(), t);
 
-            CNode.tunnel.increment();
+            CNode.tunnel.increment(
+                    Thread.currentThread().getId());
         }
         //Logger.log("start " + Thread.currentThread().getId());
     }
@@ -77,12 +77,17 @@ public class CNode {
         Task t = activetasks.remove(tid);
 
         //Logger.log("Finish task:" + t.getKey());
-
+        t.wrap();
         taskq.add(t);
-        //Logger.log("(Explain):" + ((Count) t.getMetric("Count")).explain());
-        //Logger.log("(Metrics):" + t.getMetric("Count"));
 
-        CNode.tunnel.decrement();
+        CNode.tunnel.decrement(tid,
+                ((Count)t.getMetric("Count")).getlocked());
+    }
+    public static void performBriefing(){
+        for( Map.Entry<Long,Task> tuple : CNode.activetasks.entrySet()){
+            Count c = (Count)tuple.getValue().getMetric("Count");
+            CNode.tunnel.briefing(tuple.getKey(),c.getlocked());
+        }
     }
 
     public static Task getTask() {
@@ -150,22 +155,37 @@ public class CNode {
     static class EndPoint extends Thread {
         private PrintWriter out=null;
         private final BlockingQueue<String> lbq = new LinkedBlockingQueue<>();
-
+        private final ConcurrentHashMap<Long, AtomicLong> deltaset = new ConcurrentHashMap<>();
         public EndPoint() {
             this.start();
         }
 
-        public void increment() {
+        public void increment(long tid) {
+            deltaset.put(
+                    tid,
+                    new AtomicLong(0L)
+            );
             //Logger.log("Increment");
-
-            lbq.add("1");
-            this.flush();
+            lbq.add("queue:"+"1");
+            //this.flush();
         }
 
-        public void decrement() {
+        public void briefing(long tid, double delta){
+            AtomicLong v = deltaset.get(tid);
+
+            lbq.add("loadreport:"+((long)delta-deltaset.get(tid).get()));
+            v.addAndGet((long)delta);
+            //this.flush();
+        }
+
+        public void decrement(long tid, long load) {
             //Logger.log("Decrement");
-            lbq.add("-1");
-            this.flush();
+            lbq.add("queue:"+"-1");
+            lbq.add("loadreport:"+(
+                    ((long)load)-deltaset.remove(tid).get()
+            ));
+            //this.flush();
+            //this.flush();
         }
 
         private void flush(){
@@ -187,6 +207,18 @@ public class CNode {
                 this.out = new PrintWriter(
                         sc.getOutputStream()
                 );
+
+                String message;
+
+                while (true){
+                    message = this.lbq.poll(20, TimeUnit.SECONDS);
+                    if( message == null){
+                        CNode.performBriefing();
+                    }else{
+                        this.out.println(message);
+                        this.out.flush();
+                    }
+                }
                 //Logger.log("Tunnel open");
 
             } catch (UnknownHostException e) {
@@ -194,6 +226,8 @@ public class CNode {
             } catch (IOException e) {
                 //Logger.log(e.toString());
 
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

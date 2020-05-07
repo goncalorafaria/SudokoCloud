@@ -3,6 +3,7 @@ package supervisor.server;
 import com.amazonaws.util.Base64;
 
 import java.io.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Count extends Metric implements java.io.Serializable {
 
@@ -12,17 +13,9 @@ public class Count extends Metric implements java.io.Serializable {
     double br_count = 0;
     long inc_count = 0;
     double br_s = 0;
+    AtomicLong br_count_act = new AtomicLong(0L);
 
     long n = 1;
-
-    public Count(Count a) {
-        this.i_count = a.i_count;
-        this.b_count = a.b_count;
-        this.m_count = a.m_count;
-        this.br_count = a.br_count;
-        this.inc_count = a.inc_count;
-        n = a.n;
-    }
 
     public Count() {
     }
@@ -60,6 +53,13 @@ public class Count extends Metric implements java.io.Serializable {
         }else{
             return this.br_count/4;
         }
+    }
+
+    public long getlocked(){
+        return this.br_count_act.get();
+    }
+    public void lock(){
+        this.br_count = (double)this.br_count_act.get();
     }
 
     public int getV(int index) {
@@ -102,7 +102,7 @@ public class Count extends Metric implements java.io.Serializable {
     }
 
     public synchronized Count countBranch() {
-        br_count++;
+        br_count_act.incrementAndGet();
         return this;
     }
 
