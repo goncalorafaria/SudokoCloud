@@ -217,8 +217,7 @@ public class CMonitor {
 
         double iestimate = CMonitor.requestTable.estimate(s);
         Logger.log("branch count estimate: " +
-                iestimate
-        );
+                iestimate);
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
