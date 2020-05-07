@@ -107,7 +107,6 @@ public class LoadBalancer {
                         Logger.log("Autoscalling round ");
                     }
 
-
                 } catch (InterruptedException e) {
                     Logger.log(e.toString());
                     return;

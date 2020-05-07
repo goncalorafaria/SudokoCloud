@@ -206,7 +206,6 @@ public class CMonitor {
         } catch (AmazonServiceException e) {
             Logger.log(e.toString());
         }
-
     }
 
     /** Decides to which machine to send the request.
