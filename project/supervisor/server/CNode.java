@@ -66,7 +66,7 @@ public class CNode {
             activetasks.put(Thread.currentThread().getId(), t);
 
             CNode.tunnel.increment(
-                    Thread.currentThread().getId());
+                    Thread.currentThread().getId(),taskkey);
         }
         //Logger.log("start " + Thread.currentThread().getId());
     }
@@ -91,7 +91,11 @@ public class CNode {
     }
 
     public static Task getTask() {
-        return activetasks.get(Thread.currentThread().getId());
+        return CNode.getTask(Thread.currentThread().getId());
+    }
+
+    public static Task getTask(long tid) {
+        return activetasks.get(tid);
     }
 
     public static void terminate() {
@@ -161,6 +165,7 @@ public class CNode {
         }
 
         public void increment(long tid) {
+
             deltaset.put(
                     tid,
                     new AtomicLong(0L)
@@ -170,22 +175,45 @@ public class CNode {
             //this.flush();
         }
 
-        public void briefing(long tid, double delta){
+        public void briefing(long tid, double value){
             AtomicLong v = deltaset.get(tid);
 
-            lbq.add("loadreport:"+((long)delta-deltaset.get(tid).get()));
-            v.addAndGet((long)delta);
-            //this.flush();
+            long delta = ((long)value-deltaset.get(tid).get());
+
+            senddelta(tid, delta);
+
+            v.addAndGet(delta);
+        }
+
+
+        private void senddelta(long tid, long delta){
+            double est = 0.0;
+
+            String solver = CNode.getTask(tid)
+                    .getKey().split(":")[0];
+
+            switch (solver){
+                case "BFS":
+                    est = delta*12.88852179+14068.78484095;
+                    break;
+
+                case "CP":
+                    est = delta*14.16131419+19312.86569091;
+                    break;
+
+                case "DLX":
+                    est = delta*24.39689662-1392680.19952047;
+                    break;
+            }
+
+            lbq.add("loadreport:"+((long)est));
         }
 
         public void decrement(long tid, long load) {
-            //Logger.log("Decrement");
             lbq.add("queue:"+"-1");
-            lbq.add("loadreport:"+(
-                    ((long)load)-deltaset.remove(tid).get()
-            ));
-            //this.flush();
-            //this.flush();
+
+            this.senddelta(tid,load);
+            deltaset.remove(tid);
         }
 
         private void flush(){

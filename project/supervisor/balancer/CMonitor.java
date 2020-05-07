@@ -216,8 +216,9 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
+        double iestimate = CMonitor.requestTable.estimate(s);
         Logger.log("branch count estimate: " +
-                CMonitor.requestTable.estimate(s)
+                iestimate
         );
 
         Logger.log(CMonitor.activevms.toString());
@@ -240,7 +241,7 @@ public class CMonitor {
         Iterator<CMonitor.Endpoint> it = a.iterator();
 
         int min = Integer.MAX_VALUE;
-        String mvm = null;
+        CMonitor.Endpoint mvm = null;
 
         while (it.hasNext()) {
             CMonitor.Endpoint element = it.next();
@@ -248,12 +249,14 @@ public class CMonitor {
 
             if (candidate <= min) {
                 min = candidate;
-                mvm = element.publicip;
+                mvm = element;
 
             }
         }
 
-        return mvm;
+        mvm.scheduleLoad(iestimate);
+
+        return mvm.publicip;
     }
 
     /**
