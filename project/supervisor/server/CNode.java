@@ -172,7 +172,6 @@ public class CNode {
             );
             //Logger.log("Increment");
             lbq.add("queue:"+"1");
-            //this.flush();
         }
 
         public void briefing(long tid, double value){
