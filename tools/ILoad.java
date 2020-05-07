@@ -1,10 +1,8 @@
 import BIT.highBIT.ClassInfo;
 
 import supervisor.server.CNode;
-import supervisor.storage.LocalStorage;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
-import supervisor.util.Logger;
 
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -49,8 +47,6 @@ public class ILoad {
         //Logger.publish(true,true);
 
         CloudStandart.init();
-
-        TaskStorage.init(true);
 
         CNode.init();
 

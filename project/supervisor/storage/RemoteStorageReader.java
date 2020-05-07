@@ -12,11 +12,12 @@ public class RemoteStorageReader {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         CloudStandart.init();
-        TaskStorage.init(false);
+        CachedRemoteStorage.init(false);
 
-        TaskStorage a = new TaskStorage();
-        //a.destroy();
-        /*
+        CachedRemoteStorage a = new CachedRemoteStorage(
+                CloudStandart.taskStorage_tablename,
+                CloudStandart.taskStorage_tablekey);
+
         Map<String, Map<Integer, Count>> metrics = new HashMap<>();
         Map<String, Map<Integer, Count>> overhead = new HashMap<>();
 
@@ -46,6 +47,5 @@ public class RemoteStorageReader {
 
         //System.out.println(a.describe());
 
-         */
     }
 }

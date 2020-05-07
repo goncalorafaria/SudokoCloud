@@ -3,8 +3,8 @@ package supervisor.balancer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import supervisor.storage.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
-import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
 
 import java.io.IOException;
@@ -34,17 +34,13 @@ public class LoadBalancer {
             Logger.log("Starting the Load balancer");
 
             CloudStandart.init();
-
             // Load local db
-            TaskStorage.init(false);
 
             // Connect to aws
             CMonitor.init();
 
             // start redirection thread
             worker.start();
-
-            //CMonitor.summon();
 
             HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
             server.createContext("/sudoku", new Request.Handler());

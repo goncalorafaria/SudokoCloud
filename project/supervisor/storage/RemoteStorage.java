@@ -12,7 +12,6 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import supervisor.util.CloudStandart;
-import supervisor.util.Logger;
 
 import java.io.File;
 import java.util.*;
@@ -40,6 +39,51 @@ public class RemoteStorage implements Storage<String> {
         TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
 
     }
+    /**
+    public RemoteStorage(String table, String key, String aggregation, String range) {
+        this.table = table;
+        this.key = key;
+        // Create a table with a primary hash key named 'name', which holds a string
+        CreateTableRequest createTableRequest = new CreateTableRequest();
+        createTableRequest.withTableName(table);
+        createTableRequest.withKeySchema(new KeySchemaElement().
+                withAttributeName(this.key).withKeyType(KeyType.HASH));
+
+        LocalSecondaryIndex lsi = new LocalSecondaryIndex()
+                .withIndexName(aggregation + "Index");
+
+        List<KeySchemaElement> lks = new ArrayList<KeySchemaElement>(2);
+
+        lks.add(new KeySchemaElement()
+                .withAttributeName(aggregation)
+                .withKeyType(KeyType.HASH));
+
+        lks.add(new KeySchemaElement()
+                 .withAttributeName(range)
+                .withKeyType(KeyType.RANGE));
+
+        lsi.withKeySchema(lks).withProjection(new Projection()
+                        .withProjectionType(
+                                ProjectionType.ALL));
+
+        createTableRequest.withLocalSecondaryIndexes(lsi);
+
+        createTableRequest
+                    .withAttributeDefinitions(new AttributeDefinition().
+                withAttributeName(this.key).withAttributeType(ScalarAttributeType.S))
+                    .withAttributeDefinitions(new AttributeDefinition().
+                withAttributeName(aggregation).withAttributeType(ScalarAttributeType.S))
+                    .withAttributeDefinitions(new AttributeDefinition().
+                withAttributeName(range).withAttributeType(ScalarAttributeType.S));
+
+        createTableRequest.withProvisionedThroughput(new ProvisionedThroughput().
+                withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
+
+        // Create table if it does not exist yet
+        TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
+
+    }
+     **/
 
     public static void init(boolean instance) throws AmazonClientException {
 
@@ -118,22 +162,6 @@ public class RemoteStorage implements Storage<String> {
             );
 
         PutItemResult r = dynamoDB.putItem(new PutItemRequest(table, item));
-        //Logger.log("put result: " + r.toString());
-        // Starting tmp
-
-        /*
-        HashMap<String, Condition> scanFilter = new HashMap<>();
-        Condition condition = new Condition()
-                .withComparisonOperator(ComparisonOperator.GT.toString())
-                .withAttributeValueList(new AttributeValue().withN("2000"));
-
-        scanFilter.put("year", condition);
-
-        ScanRequest scanRequest = new ScanRequest(table).withScanFilter(scanFilter);
-        ScanResult scanResult = dynamoDB.scan(scanRequest);
-        System.out.println("Result: " + scanResult);
-
-        */
 
     }
 
@@ -155,13 +183,19 @@ public class RemoteStorage implements Storage<String> {
 
         Map<String, String> it = new HashMap<>();
 
+        if( r == null || r.getItem() == null )
+            return null;
+
         for (Map.Entry<String, AttributeValue> tp : r.getItem().entrySet())
             it.put(
                     tp.getKey(),
                     tp.getValue().getS()
             );
 
-        return it;
+        if( it.size() == 0 )
+            return null;
+        else
+            return it;
     }
 
     @Override

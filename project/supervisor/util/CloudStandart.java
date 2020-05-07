@@ -17,6 +17,10 @@ public class CloudStandart {
     public static String keyname = "CNV-lab-AWS";
     public static String securitygroups = "CNV-ssh+http";
 
+
+    public static String taskStorage_tablename = "RequestTable";
+    public static String taskStorage_tablekey = "key";
+
     public static void init(){
 
         try {
