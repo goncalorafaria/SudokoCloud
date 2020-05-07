@@ -79,7 +79,7 @@ public class CNode {
         Long tid = Thread.currentThread().getId();
         Task t = activetasks.remove(tid);
 
-        //Logger.log("Finish task:" + t.getKey());
+        Logger.log("Finish task:" + t.getKey());
         t.wrap();
         taskq.add(t);
 
@@ -168,12 +168,11 @@ public class CNode {
         }
 
         public void increment(long tid) {
-
             deltaset.put(
                     tid,
                     new AtomicLong(0L)
             );
-            //Logger.log("Increment");
+
             lbq.add("queue:"+"1");
         }
 
@@ -231,7 +230,7 @@ public class CNode {
                 while (true){
                     message = this.lbq.poll(20, TimeUnit.SECONDS);
                     if( message == null){
-                        CNode.performBriefing();
+                        //CNode.performBriefing();
                     }else{
                         this.out.println(message);
                         this.out.flush();
