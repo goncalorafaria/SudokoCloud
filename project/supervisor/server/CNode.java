@@ -66,7 +66,7 @@ public class CNode {
             activetasks.put(Thread.currentThread().getId(), t);
 
             CNode.tunnel.increment(
-                    Thread.currentThread().getId(),taskkey);
+                    Thread.currentThread().getId());
         }
         //Logger.log("start " + Thread.currentThread().getId());
     }
@@ -214,18 +214,6 @@ public class CNode {
 
             this.senddelta(tid,load);
             deltaset.remove(tid);
-        }
-
-        private void flush(){
-            if( out != null ){
-                try {
-                    this.out.println(
-                            lbq.take()
-                    );
-                    this.out.flush();
-                }catch (InterruptedException e){
-                }
-            }
         }
 
         public void run() {
