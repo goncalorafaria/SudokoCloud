@@ -64,7 +64,8 @@ public class CNode {
         if (!activetasks.containsKey(Thread.currentThread().getId())) {
             Task t = new Task(taskkey);
             t.addMetric("Count", new Count());
-            t.addMetric("Overhead", new Count());
+            if(overhead)
+                t.addMetric("Overhead", new Count());
 
             activetasks.put(Thread.currentThread().getId(), t);
 
@@ -72,6 +73,7 @@ public class CNode {
                     Thread.currentThread().getId());
 
             Logger.log("Registering task:" + taskkey);
+            Logger.log("with "+ Thread.currentThread().getId());
 
         }
         Logger.log("start " + Thread.currentThread().getId());
@@ -220,7 +222,7 @@ public class CNode {
         public void decrement(long tid, long load) {
             lbq.add("queue:"+"-1");
 
-            senddelta(tid,load);
+            //senddelta(tid,load);
             deltaset.remove(tid);
         }
 
