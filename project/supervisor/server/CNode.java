@@ -70,8 +70,11 @@ public class CNode {
 
             CNode.tunnel.increment(
                     Thread.currentThread().getId());
+
+            Logger.log("Registering task:" + taskkey);
+
         }
-        //Logger.log("start " + Thread.currentThread().getId());
+        Logger.log("start " + Thread.currentThread().getId());
     }
 
     /** Termina um novo pedido. */
