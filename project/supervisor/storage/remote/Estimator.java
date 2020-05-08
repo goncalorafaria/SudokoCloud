@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package supervisor.storage.remote;
 
 import java.io.IOException;
@@ -12,10 +7,7 @@ import supervisor.balancer.CMonitor;
 import supervisor.server.Count;
 import supervisor.util.Logger;
 
-/**
- *
- * @author JARM
- */
+
 public class Estimator {
 
     static double estimateBranchesTaken(String key, String solver, String un, String board, CachedRemoteStorage cachedRemoteStorage) {
@@ -53,12 +45,12 @@ public class Estimator {
                             } else {
                                 choice = before;
                             }
-                            Count c = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + choice + ":" + board).get("Count"));
+                            Count c = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + choice + ":" + board).getValue().get("Count"));
                             est = c.mean() + Math.sqrt(c.var());
                         } else {
                             // does linear interpolation.
-                            Count cbefore = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + before + ":" + board).get("Count"));
-                            Count cafter = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + after + ":" + board).get("Count"));
+                            Count cbefore = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + before + ":" + board).getValue().get("Count"));
+                            Count cafter = Count.fromString(cachedRemoteStorage.cache.get(solver + ":" + after + ":" + board).getValue().get("Count"));
                             est = linint((double) before, cbefore.mean(), (double) after, cafter.mean(), (double) target);
                             est += Math.sqrt(Math.max(cafter.var(), cbefore.var()));
                         }

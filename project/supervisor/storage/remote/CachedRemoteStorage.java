@@ -5,62 +5,60 @@ import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
-import supervisor.server.Count;
-import supervisor.util.Logger;
-
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.PriorityBlockingQueue;
+import supervisor.util.Logger;
 
 public class CachedRemoteStorage extends RemoteStorage{
+    
+    public static final int CACHE_SIZE = 10;
+    
+    class Element implements Comparable<Element>{
+        final String key;
+        private Map<String, String> value;
+        private int number_of_accesses;
 
-    static class StochasticBaditProblem {
-        private final AtomicInteger hitc=new AtomicInteger(1);
-        private final AtomicInteger updatec=new AtomicInteger(1);
-        private final AtomicInteger totalc=new AtomicInteger(1);
-
-        private final double base;
-
-        StochasticBaditProblem(double base){
-            this.base = base;
+        private Element(String key, Map<String, String> value) {
+            this.key = key;
+            this.value = value;
+            this.number_of_accesses = 0;
         }
-
-        void hit(){
-            hitc.addAndGet(1);
-            totalc.addAndGet(1);
+        public Map<String, String> getValue(){ // also used by Estimator
+            number_of_accesses++;
+            return value;
         }
-
-        void update(){
-            updatec.addAndGet(1);
-            totalc.addAndGet(1);
+        public int getAccesses(){
+            return number_of_accesses;
         }
-
-        double hitScore(){
-            return base + Math.sqrt(2*Math.log(totalc.get())/hitc.get());
-        }
-
-        double updateScore(){
-            return Math.sqrt(2*Math.log(totalc.get())/updatec.get());
-        }
-
-        boolean shouldUpdate(){
-            double a = hitScore();
-            double b = updateScore();
-
-            return (b >= a);
+        
+        
+        /* Used by the removal_queue 
+           Can be changed to another removal policy;
+        */
+        @Override
+        public int compareTo(Element o) { 
+            if (this.key.equals(o.key))
+                return 0;
+            return (this.getAccesses() > o.getAccesses() ? -1 : 1); // ascending order
         }
     }
-    /* cache for a single table */
-    ConcurrentHashMap<String,Map<String, String>> cache =
+   
+    
+    /* Index by Key */
+    ConcurrentHashMap<String,Element> cache =
             new ConcurrentHashMap<>();
 
-    Map<String,Map<String,Set<String>>> cachetree =
+    /* Index by Algorithm and then Board (used by the Estimator) */
+    ConcurrentHashMap<String,Map<String,Set<String>>> cachetree =
             new ConcurrentHashMap<>();
+    
+    /* This Priority Queue orders the Elements by the removal order */
+    PriorityBlockingQueue<Element> removal_queue = new PriorityBlockingQueue<>();
+    
+    UpdatePolicy update_policies = new UpdatePolicy();
 
-    private ConcurrentHashMap<String, StochasticBaditProblem> hittable =
-            new ConcurrentHashMap<>();
 
     public CachedRemoteStorage(String table, String key) {
         super(table, key);
@@ -78,37 +76,65 @@ public class CachedRemoteStorage extends RemoteStorage{
     public void destroy() {
         super.destroy();
         cache.clear();
+        cachetree.clear();
+        update_policies.clear();
+        removal_queue.clear();
+    }
+    
+    public boolean isFull(){
+        return cache.size() >= CACHE_SIZE;
     }
 
+    
     /**
      * */
     @Override
     public Map<String, String> get(String key) {
-        Map<String, String> value = cache.get(key);
-        if (value==null){
+        Element element = cache.get(key);
+        //System.out.println("get : "+key+"\n"+cache.size()+" : "+removal_queue.size());
+        //System.out.println(element==null);
+        if (element==null){
             // miss
-            value = super.get(key);
+            // lets get the value from the remote storage
+            Map<String, String> value = super.get(key);
 
-            if(value==null)
+            if(value==null) // remote storage also doesn't have it
                 return null;
-
-            this.cacheput(key,value);
-            hittable.put(key, new StochasticBaditProblem(0.1));
+            
+            this.cacheput(key,value); // add it to the cache
+            update_policies.addPolicy(key); // add the update policy for this key
             return value;
         } else {
+            Map<String, String> value = element.getValue();
             // hit
-            value = this.updatePolicy(
-                    hittable.get(key),
-                    value,
-                    key);
-
+            
+            // Policy for this key decides if we need to get a new version
+            // from the remote storage
+            if (update_policies.updatePolicy(value,key)){
+                value = super.get(key);
+                this.cacheUpdate(key,value);
+            }
+            
             return value;
         }
     }
-
+    
+    private void createSpace() {
+        cache.remove(removal_queue.poll().key);
+    }
+    
     private void cacheput(String key, Map<String, String> value){
-        cache.put(key,value);
-
+        // Update cache
+        while(isFull()){
+            createSpace();
+        }
+        //System.out.println("Put : "+key+"\n"+cache.size()+" : "+removal_queue.size());
+        Element element = new Element(key,value);
+        cache.put(key,element);
+        removal_queue.put(element);
+        
+        
+        // Update cachetree
         String[] sv = key.split(":");
         //String classe = sv[0] + ":" + sv[2] + ":" + sv[3];
         String solver = sv[0];
@@ -123,7 +149,14 @@ public class CachedRemoteStorage extends RemoteStorage{
 
         solvert.get(board).add(un);
     }
-
+    
+    private void cacheUpdate(String key, Map<String, String> value) {
+        //System.out.println("Update : "+key+"\n"+cache.size()+" : "+removal_queue.size());
+        
+        Element element = cache.get(key);
+        element.value = value;
+    }
+    
     boolean cachecontains( String solver, String board ){
 
         //Logger.log(solver+"+"+board);
@@ -135,26 +168,6 @@ public class CachedRemoteStorage extends RemoteStorage{
         return false;
     }
 
-
-
-    private Map<String,String> updatePolicy(
-            StochasticBaditProblem ucb,
-            Map<String,String> value,
-            String key){
-
-            // sqrt( 2 * log(total)/ refreshc ) >= 1
-            if( ucb.shouldUpdate() ){
-                // updating cache.
-                ucb.update();
-                value = super.get(key);
-                this.cacheput(key,value);
-                Logger.log("Updating the cache for:  " + key);
-            }else{
-                ucb.hit();
-                Logger.log("Hit on cache with: " + key);
-            }
-        return value;
-    }
     
     // to be sure we have all the keys this needs to be remote
     @Override
