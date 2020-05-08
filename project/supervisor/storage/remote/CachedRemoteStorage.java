@@ -19,18 +19,23 @@ public class CachedRemoteStorage extends RemoteStorage{
         final String key;
         private Map<String, String> value;
         private int number_of_accesses;
-
+        private long time;
+        
         private Element(String key, Map<String, String> value) {
             this.key = key;
             this.value = value;
+            this.time = System.currentTimeMillis();
+            
             this.number_of_accesses = 0;
         }
+        
         public Map<String, String> getValue(){ // also used by Estimator
-            number_of_accesses++;
+            this.number_of_accesses++;
+            this.time = System.currentTimeMillis();
             return value;
         }
-        public int getAccesses(){
-            return number_of_accesses;
+        public float getRemovalValue(){
+            return number_of_accesses/(10+(System.currentTimeMillis()-this.time)*0.001f);
         }
         
         
@@ -41,7 +46,7 @@ public class CachedRemoteStorage extends RemoteStorage{
         public int compareTo(Element o) { 
             if (this.key.equals(o.key))
                 return 0;
-            return (this.getAccesses() > o.getAccesses() ? -1 : 1); // ascending order
+            return (this.getRemovalValue() > o.getRemovalValue() ? -1 : 1); // ascending order
         }
     }
    
