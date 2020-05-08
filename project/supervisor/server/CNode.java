@@ -195,12 +195,14 @@ public class CNode {
             v.addAndGet(delta);
         }
 
-
         private void senddelta(long tid, long delta){
-            double est = 0.0;
+            double est = (double)delta;
 
+            /**
             String solver = CNode.getTask(tid)
                     .getKey().split(":")[0];
+             **/
+            String solver = "BFS";
 
             switch (solver){
                 case "BFS":
@@ -222,8 +224,7 @@ public class CNode {
         public void decrement(long tid, long load) {
             lbq.add("queue:"+"-1");
 
-            //senddelta(tid,load);
-            deltaset.remove(tid);
+            senddelta(tid,load - deltaset.remove(tid).get());
         }
 
         public void run() {
