@@ -201,12 +201,12 @@ public class CNode {
 
             long delta = ((long)value-deltaset.get(tid).get());
 
-            senddelta(tid, delta);
+            senddelta(tid, delta, 0);
 
             v.addAndGet(delta);
         }
 
-        private void senddelta(long tid, long delta){
+        private void senddelta(long tid, long delta, int fixed){
             double est = (double)delta;
 
             String solver = solverset.get(tid);
@@ -215,15 +215,15 @@ public class CNode {
             if( solver != null ) {
                 switch (solver) {
                     case "BFS":
-                        est = delta * 12.88852179 + 14068.78484095;
+                        est = delta * 12.88852179 + fixed*14068.78484095;
                         break;
 
                     case "CP":
-                        est = delta * 14.16131419 + 19312.86569091;
+                        est = delta * 14.16131419 + fixed*19312.86569091;
                         break;
 
                     case "DLX":
-                        est = delta * 24.39689662 - 1392680.19952047;
+                        est = delta * 24.39689662 - fixed*1392680.19952047;
                         break;
                 }
                 lbq.add("loadreport:" + ((long) est));
@@ -235,7 +235,7 @@ public class CNode {
 
             long tmp = load - deltaset.remove(tid).get();
 
-            senddelta(tid,tmp);
+            senddelta(tid,tmp, 1);
 
             solverset.remove(tid);
         }
