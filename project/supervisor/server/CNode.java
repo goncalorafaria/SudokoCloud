@@ -12,6 +12,7 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -95,7 +96,9 @@ public class CNode {
                 ((Count)t.getMetric("Count")).getlocked());
     }
     public static void performBriefing(){
-        for( Map.Entry<Long,Task> tuple : CNode.activetasks.entrySet()){
+        Set< Map.Entry<Long,Task> > ss = CNode.activetasks.entrySet();
+
+        for( Map.Entry<Long,Task> tuple : ss){
             Count c = (Count)tuple.getValue().getMetric("Count");
             CNode.tunnel.briefing(tuple.getKey(),c.getlocked());
         }
@@ -250,7 +253,7 @@ public class CNode {
                 while (true){
                     message = this.lbq.poll(20, TimeUnit.SECONDS);
                     if( message == null){
-                        //CNode.performBriefing();
+                        CNode.performBriefing();
                     }else{
                         this.out.println(message);
                         this.out.flush();
