@@ -23,7 +23,7 @@ public class CNode {
 
     /* tasks que estão a decorrer, indexadas pelo thread que está a correr. */
     private static final Map<Long, Task> activetasks
-            = new ConcurrentSkipListMap<>();
+            = new ConcurrentHashMap<>();
 
     /* Fila de espera para publicar as metricas das tasks terminadas */
     private static final BlockingQueue<Task> taskq = new LinkedBlockingQueue();
@@ -69,8 +69,11 @@ public class CNode {
 
             activetasks.put(Thread.currentThread().getId(), t);
 
+            String solver = taskkey.split(":")[0];
+
             CNode.tunnel.increment(
-                    Thread.currentThread().getId());
+                    Thread.currentThread().getId(),
+                    solver);
 
             Logger.log("Registering task:" + taskkey);
             Logger.log("with "+ Thread.currentThread().getId());
@@ -97,7 +100,6 @@ public class CNode {
             CNode.tunnel.briefing(tuple.getKey(),c.getlocked());
         }
     }
-
     public static Task getTask() {
         return CNode.getTask(Thread.currentThread().getId());
     }
@@ -166,21 +168,27 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private PrintWriter out=null;
+
         private final BlockingQueue<String> lbq
                 = new LinkedBlockingQueue<>();
 
         private final ConcurrentHashMap<Long, AtomicLong> deltaset
                 = new ConcurrentHashMap<>();
 
+        private final ConcurrentHashMap<Long, String> solverset
+                = new ConcurrentHashMap<>();
+
         public EndPoint() {
             this.start();
         }
 
-        public void increment(long tid) {
+        public void increment(long tid, String solver) {
             deltaset.put(
                     tid,
                     new AtomicLong(0L)
             );
+
+            solverset.put(tid,solver);
 
             lbq.add("queue:"+"1");
         }
@@ -198,33 +206,35 @@ public class CNode {
         private void senddelta(long tid, long delta){
             double est = (double)delta;
 
-            /**
-            String solver = CNode.getTask(tid)
-                    .getKey().split(":")[0];
-             **/
-            String solver = "BFS";
+            String solver = solverset.get(tid);
 
-            switch (solver){
-                case "BFS":
-                    est = delta*12.88852179+14068.78484095;
-                    break;
+            //String solver = "BFS";
+            if( solver != null ) {
+                switch (solver) {
+                    case "BFS":
+                        est = delta * 12.88852179 + 14068.78484095;
+                        break;
 
-                case "CP":
-                    est = delta*14.16131419+19312.86569091;
-                    break;
+                    case "CP":
+                        est = delta * 14.16131419 + 19312.86569091;
+                        break;
 
-                case "DLX":
-                    est = delta*24.39689662-1392680.19952047;
-                    break;
+                    case "DLX":
+                        est = delta * 24.39689662 - 1392680.19952047;
+                        break;
+                }
+                lbq.add("loadreport:" + ((long) est));
             }
-
-            lbq.add("loadreport:"+((long)est));
         }
 
         public void decrement(long tid, long load) {
             lbq.add("queue:"+"-1");
 
-            senddelta(tid,load - deltaset.remove(tid).get());
+            long tmp = load - deltaset.remove(tid).get();
+
+            senddelta(tid,tmp);
+
+            solverset.remove(tid);
         }
 
         public void run() {
