@@ -175,43 +175,55 @@ public class CNode {
         private final BlockingQueue<String> lbq
                 = new LinkedBlockingQueue<>();
 
-        private final ConcurrentHashMap<Long, AtomicLong> deltaset
+        private final ConcurrentHashMap<Long, Object[]> deltaset
                 = new ConcurrentHashMap<>();
 
-        private final ConcurrentHashMap<Long, String> solverset
-                = new ConcurrentHashMap<>();
+        private static int LOAD = 0;
+        private static int SOLVER = 1;
+        private static int TURN = 2;
 
         public EndPoint() {
             this.start();
         }
 
         public void increment(long tid, String solver) {
+
+            Object[] v = new Object[3];
+            v[LOAD] = new AtomicLong(0L);
+            v[SOLVER] = solver;
+            v[TURN] = Integer.valueOf(0);
+
             deltaset.put(
                     tid,
-                    new AtomicLong(0L)
+                    v
             );
-
-            solverset.put(tid,solver);
+            //solverset.put(tid,solver);
 
             lbq.add("queue:"+"1");
         }
 
         public void briefing(long tid, double value){
-            AtomicLong v = deltaset.get(tid);
+            Object[] v = deltaset.get(tid);
 
-            long delta = ((long)value-deltaset.get(tid).get());
+            AtomicLong al = (AtomicLong) v[LOAD];
+            String solver= (String)v[SOLVER];
 
-            senddelta(tid, delta, 0);
+            long delta = ((long)value-al.get());
 
-            v.addAndGet(delta);
+            senddelta(tid, delta, solver,(Integer)v[TURN]);
+
+            v[TURN] = Integer.valueOf(((Integer)v[TURN]) + 1);
+
+            al.addAndGet(delta);
         }
 
-        private void senddelta(long tid, long delta, int fixed){
+        private void senddelta(long tid, long delta, String solver, int turn){
             double est = (double)delta;
-
-            String solver = solverset.get(tid);
-
+            int fixed = 0;
             //String solver = "BFS";
+            if(turn == 0)
+                fixed = 1;
+
             if( solver != null ) {
                 switch (solver) {
                     case "BFS":
@@ -232,12 +244,11 @@ public class CNode {
 
         public void decrement(long tid, long load) {
             lbq.add("queue:"+"-1");
+            Object[] v = deltaset.remove(tid);
 
-            long tmp = load - deltaset.remove(tid).get();
+            long tmp = load - ((AtomicLong)v[LOAD]).get();
 
-            senddelta(tid,tmp, 1);
-
-            solverset.remove(tid);
+            senddelta(tid, tmp, (String)v[SOLVER], (Integer)v[TURN]);
         }
 
         public void run() {

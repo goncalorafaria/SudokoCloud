@@ -395,7 +395,7 @@ public class CMonitor {
                             args[1]);
                     this.discountLoad(tmp);
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
-                    Logger.log("sent value:" + tmp);
+                    //Logger.log("sent value:" + tmp);
                     break;
                 default: Logger.log(args[0]);
             }
