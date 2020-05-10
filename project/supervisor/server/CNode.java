@@ -197,7 +197,6 @@ public class CNode {
                     tid,
                     v
             );
-            //solverset.put(tid,solver);
 
             lbq.add("queue:"+"1");
         }
@@ -212,7 +211,8 @@ public class CNode {
 
             senddelta(tid, delta, solver,(Integer)v[TURN]);
 
-            v[TURN] = Integer.valueOf(((Integer)v[TURN]) + 1);
+            v[TURN] = Integer.valueOf(
+                    ((Integer)v[TURN]) + 1);
 
             al.addAndGet(delta);
         }
@@ -264,7 +264,7 @@ public class CNode {
                 while (true){
                     message = this.lbq.poll(20, TimeUnit.SECONDS);
                     if( message == null){
-                        CNode.performBriefing();
+                        //CNode.performBriefing();
                     }else{
                         this.out.println(message);
                         this.out.flush();
