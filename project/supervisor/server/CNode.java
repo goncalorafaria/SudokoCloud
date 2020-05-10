@@ -1,6 +1,6 @@
 package supervisor.server;
 
-import supervisor.storage.TaskStorage;
+import supervisor.storage.remote.TaskStorage;
 import supervisor.util.CloudStandart;
 
 import java.io.IOException;

@@ -1,7 +1,7 @@
 import BIT.highBIT.ClassInfo;
 
 import supervisor.server.CNode;
-import supervisor.storage.TaskStorage;
+import supervisor.storage.remote.TaskStorage;
 import supervisor.util.CloudStandart;
 
 import java.util.Enumeration;

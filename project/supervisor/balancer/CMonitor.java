@@ -10,7 +10,7 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
-import supervisor.storage.CachedRemoteStorage;
+import supervisor.storage.remote.CachedRemoteStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Thread.sleep;
+import supervisor.storage.remote.Estimator;
 
 public class CMonitor {
     /**
@@ -215,7 +216,7 @@ public class CMonitor {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
         Logger.log("branch count estimate: " +
-                CMonitor.requestTable.estimate(s)
+                Estimator.estimate(s, CMonitor.requestTable)
         );
 
         Logger.log(CMonitor.activevms.toString());

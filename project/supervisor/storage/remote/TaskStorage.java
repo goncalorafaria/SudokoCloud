@@ -1,10 +1,10 @@
-package supervisor.storage;
+package supervisor.storage.remote;
 
 import supervisor.util.CloudStandart;
 
 import java.util.*;
 
-public class TaskStorage extends RemoteStorage {
+public class TaskStorage extends CachedRemoteStorage {
 
     public TaskStorage() {
         super(CloudStandart.taskStorage_tablename,

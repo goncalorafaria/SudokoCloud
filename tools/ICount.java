@@ -37,7 +37,6 @@ public class ICount {
                 tr[1] = Integer.parseInt(argv[3])==1;// methods
                 tr[2] = Integer.parseInt(argv[4])==1;// loops
                 tr[3] = Integer.parseInt(argv[5])==1;// inc
-
             }
 
         }else{
