@@ -235,7 +235,7 @@ public class CNode {
                         break;
 
                     case "DLX":
-                        est = delta * 24.39689662 - fixed*1392680.19952047;
+                        est = (delta * 24.39689662 - fixed*1392680.19952047)/100;
                         break;
                 }
                 lbq.add("loadreport:" + ((long) est));

@@ -248,11 +248,11 @@ public class CachedRemoteStorage extends RemoteStorage{
                 est = est*14.16131419+19312.86569091;
                 break;
             case "DLX":
-                est = est*24.39689662-1392680.19952047;
+                est = (est*0.02439689662 + 60000);
                 break;
         }
         if( est < 0 ){
-            est = 400000*24.39689662 - 1392680.19952047;
+            est = (400000*0.02439689662 + 60000);
         }
         return est;
     }

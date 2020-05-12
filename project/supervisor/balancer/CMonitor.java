@@ -42,6 +42,11 @@ public class CMonitor {
     private static final String keyname = CloudStandart.keyname;
     private static final String securitygroups = CloudStandart.securitygroups;
 
+    private static final long idealThreashold = 200000;
+    private static final long ceilingThreashold = (int)(idealThreashold * 2);
+    private static final long scaleUpThreashold = (int)(idealThreashold * 1.5);
+    private static final long scaleDownThreashold = (int)(idealThreashold * 0.5);
+
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms = new AtomicInteger(0);
 
@@ -109,42 +114,29 @@ public class CMonitor {
     static void autoscale(int requests) {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
+        boolean go = true;
 
-        int s = 0;
-
-        int iddle = CMonitor.vmstates.size();
-
-        for (String vm : new HashSet<>(activevms)) {
-            Endpoint e = CMonitor.vmstates.get(vm);
-            a.add(e);
-            s += e.qsize.get();
-        }
-
-
-        if (requests + s + 1 < iddle) {
-            Iterator<CMonitor.Endpoint> it = a.iterator();
-
-            int min = Integer.MAX_VALUE;
-            String mvm = null;
-
-            while (it.hasNext()) {
-                CMonitor.Endpoint element = it.next();
-                int candidate = element.qsize.get();
-
-                if (candidate <= min) {
-                    min = candidate;
-                    mvm = element.vm;
-
-                }
+        while(go) {
+            double exp = 0;
+            go = false;
+            Collection<Endpoint> sep = vmstates.values();
+            for (Endpoint e : sep) {
+                exp += e.getLoad();
             }
-            schedulerecall(mvm);
-        }
+            exp = exp / sep.size();
 
-        if (requests + s >= 3 * iddle && iddle <= s/4 ) {
-            Logger.log("summon:");
-            CMonitor.summon();
-        }
+            if (exp <= scaleDownThreashold && activevms.size() > 1) {
+                go = true;
+                Logger.log("discard:");
+                schedulerecall(Collections.min(sep).vm);
+            }
 
+            if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
+                go = true;
+                Logger.log("summon:");
+                CMonitor.summon();
+            }
+        }
     }
 
     /**
@@ -216,45 +208,41 @@ public class CMonitor {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
         double iestimate = CMonitor.requestTable.estimate(s);
+        boolean go = true;
+
         Logger.log("branch count estimate: " +
                 iestimate);
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
 
-        while (tmp.size() == 0) {
-            Logger.log(".");
-            sleep(5000);
-            tmp.addAll(CMonitor.activevms);
-        }
+        CMonitor.Endpoint minx = null;
 
-        Set<CMonitor.Endpoint> a = new HashSet<>();
-
-        for (String vm : tmp) {
-            CMonitor.Endpoint element = CMonitor.
-                    vmstates.get(vm);
-            a.add(element);
-        }
-
-        Iterator<CMonitor.Endpoint> it = a.iterator();
-
-        int min = Integer.MAX_VALUE;
-        CMonitor.Endpoint mvm = null;
-
-        while (it.hasNext()) {
-            CMonitor.Endpoint element = it.next();
-            int candidate = element.qsize.get();
-
-            if (candidate <= min) {
-                min = candidate;
-                mvm = element;
-
+        while( go ) {
+            while (tmp.size() == 0) {
+                Logger.log(".");
+                sleep(5000);
+                tmp.addAll(CMonitor.activevms);
             }
+
+            Set<Endpoint> hset = new HashSet<>();
+            /* find min code */
+            for (CMonitor.Endpoint e : vmstates.values()) {
+                if (activevms.contains(e.vm))
+                    hset.add(e);
+            }
+            minx = Collections.min(hset);
+
+            go = ceilingThreashold <= minx.getLoad();
+
+
         }
 
-        mvm.scheduleLoad(iestimate);
+        Logger.log(" Load of selected server :" + minx.getLoad());
 
-        return mvm.publicip;
+        minx.scheduleLoad(iestimate);
+
+        return minx.publicip;
     }
 
     /**
@@ -310,11 +298,15 @@ public class CMonitor {
         }
 
         /**
-         * Unsafe, causes deadlock.
+         * Unsafe, was causing deadlock.
          * */
         @Override
         public int compareTo(Endpoint o) {
-            return this.qsize.get() - o.qsize.get();
+
+            long mev = this.load.get();
+            long otherv = o.load.get();
+
+            return (int)(mev-otherv);
         }
 
         public long getLoad(){ return load.get();}
@@ -322,7 +314,11 @@ public class CMonitor {
         public void scheduleLoad(double l) { load.addAndGet((long)l); }
 
         private void discountLoad(long l){
-            load.addAndGet(-l);
+            long tmp = load.addAndGet(-l);
+
+            if( tmp < 0)
+                load.addAndGet(-tmp);
+
         }
         public void recall() {
             CMonitor.activevms.remove(vm);
