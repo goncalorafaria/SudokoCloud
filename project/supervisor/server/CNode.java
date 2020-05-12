@@ -1,5 +1,6 @@
 package supervisor.server;
 
+import supervisor.balancer.CMonitor;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
@@ -132,38 +133,33 @@ public class CNode {
 
                 try {
                     //Logger.log("Publisher:Halt");
-                    Task itask = CNode.taskq.poll(
-                            20,
-                            TimeUnit.SECONDS);
+                    Task itask = CNode.taskq.take();
 
-                    if( itask != null ) {
-                        String tsk = itask.getKey();
+                    String tsk = itask.getKey();
 
-                        Map<String, String> row;
+                    Map<String, String> row;
 
-                        row = requestTable.get(tsk);
-                        if (row == null)
-                            row = new HashMap<>();
+                    row = requestTable.get(tsk);
+                    if (row == null)
+                        row = new HashMap<>();
 
 
-                        for (String mname : itask.metricsK()) {
+                    for (String mname : itask.metricsK()) {
 
-                            Metric m = itask.getMetric(mname);
-                            Count c = (Count) m;
+                        Metric m = itask.getMetric(mname);
+                        Count c = (Count) m;
 
-                            if (c.valid()) {
-                                if (row.containsKey(mname)) {
-                                    Count cold = Count.fromString(row.get(mname));
-                                    cold.aggregate(c);
-                                    c = cold;
-                                }
-                                row.put(mname, c.toBinary());
+                        if (c.valid()) {
+                            if (row.containsKey(mname)) {
+                                Count cold = Count.fromString(row.get(mname));
+                                cold.aggregate(c);
+                                c = cold;
                             }
+                            row.put(mname, c.toBinary());
                         }
-                        requestTable.put(tsk, row);
-                    }else{
-                        CNode.performBriefing();
                     }
+                    requestTable.put(tsk, row);
+
 
                 } catch (InterruptedException e) {
                     Logger.log(e.getMessage());
@@ -219,9 +215,52 @@ public class CNode {
 
             senddelta(tid, delta, solver,((AtomicInteger)v[TURN]).get());
 
-            ((AtomicInteger)v[TURN]).getAndIncrement();
+            ((AtomicInteger)v[TURN]).weakCompareAndSet(0,1);
 
             al.addAndGet(delta);
+        }
+
+        private void recovery(){
+
+            Thread th = Thread.currentThread();
+
+            //####################### BADASS MODE ON
+            int p = th.getPriority();
+            try {
+                th.setPriority(Thread.MAX_PRIORITY);
+            }catch ( SecurityException e){
+                Logger.log(e.getMessage());
+            }
+            //####################### BADASS MODE ON
+
+            Set<Map.Entry<Long,Object[]>> dcache = deltaset.entrySet();
+            this.lbq.clear();
+            long val = 0;
+
+            for( Map.Entry<Long,Object[]>  me: dcache ){
+
+                Task t = CNode.activetasks.get(me.getKey());
+
+                if( t != null ){
+                    Object[] v = me.getValue();
+                    AtomicLong al = (AtomicLong) v[LOAD];
+                    val += al.get();
+                    String k = t.getKey();
+                    lbq.add("fault-key:" + k);
+                }
+            }
+
+            int q = CNode.activetasks.size();
+            lbq.add("loadreport:" + val);
+            lbq.add("queue:" + q);
+
+            //####################### BADASS MODE OFF
+            try{
+                th.setPriority(p);
+            }catch ( SecurityException e){
+                Logger.log(e.getMessage());
+            }
+            //####################### BADASS MODE OFF
         }
 
         private void senddelta(long tid, long delta, String solver, int turn){
@@ -260,28 +299,42 @@ public class CNode {
         }
 
         public void run() {
-            try {
-                Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
+            boolean downed = false;
 
-                this.out = new PrintWriter(
-                        sc.getOutputStream()
-                );
+            while(true) {
+                try {
+                    Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
 
-                String message;
+                    this.out = new PrintWriter(
+                            sc.getOutputStream()
+                    );
 
-                while (true){
-                    message = this.lbq.take();
-                    this.out.println(message);
-                    this.out.flush();
+                    if(downed) {
+                        this.recovery();
+                        downed = false;
+                    }
+
+                    String message;
+
+                    while (true) {
+                        message = this.lbq.poll(20, TimeUnit.SECONDS);
+
+                        if (message != null) {
+                            this.out.println(message);
+                            this.out.flush();
+                        } else {
+                            CNode.performBriefing();
+                        }
+                    }
+                    //Logger.log("Tunnel open");
+
+                } catch (IOException e) {
+                    Logger.log(e.toString());
+                    Logger.log("Load Balancer most likely went down.");
+                    downed=true;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                //Logger.log("Tunnel open");
-
-            } catch (UnknownHostException e) {
-                Logger.log(e.toString());
-            } catch (IOException e) {
-                Logger.log(e.toString());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }

@@ -104,6 +104,8 @@ public class CMonitor {
         CMonitor.requestTable = new CachedRemoteStorage(
                 CloudStandart.taskStorage_tablename,
                 CloudStandart.taskStorage_tablekey);
+
+        CMonitor.serverRecovery();
     }
 
     /**
@@ -124,18 +126,19 @@ public class CMonitor {
                 exp += e.getLoad();
             }
             exp = exp / sep.size();
-
+            /*
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
                 go = true;
-                Logger.log("discard:");
-                schedulerecall(Collections.min(sep).vm);
+                //Logger.log("discard:");
+                //schedulerecall(Collections.min(sep).vm);
             }
 
             if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
                 go = true;
-                Logger.log("summon:");
-                CMonitor.summon();
+                //Logger.log("summon:");
+                //CMonitor.summon();
             }
+             */
         }
     }
 
@@ -175,6 +178,11 @@ public class CMonitor {
         CMonitor.startingvms.addAndGet(1);
 
         return newInstanceId;
+    }
+
+    static void serverRecovery(){
+        for( String newInstanceId : getActiveInstances().keySet())
+            CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
     }
 
     /**
@@ -391,7 +399,11 @@ public class CMonitor {
                             args[1]);
                     this.discountLoad(tmp);
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
-                    //Logger.log("sent value:" + tmp);
+                    break;
+                case "fault-key":
+                    double est = CMonitor.requestTable.estimate(args[1]);
+                    this.scheduleLoad(est);
+                    Logger.log("fault-key" + ":" + args[1] + ":" + est);
                     break;
                 default: Logger.log(args[0]);
             }
