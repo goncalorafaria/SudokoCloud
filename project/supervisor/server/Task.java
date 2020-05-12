@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Task {
 
     private final String key;
-    //private Long time = System.currentTimeMillis();;
+    private Long time = System.currentTimeMillis();;
 
     private final Map<String, Metric> metrics = new ConcurrentHashMap<>();
 
@@ -33,8 +33,8 @@ public class Task {
     }
 
     public void wrap(){
-        //this.time = System.currentTimeMillis() - this.time;
-        //((Count)metrics.get("Count")).inc_count = this.time;
+        this.time = System.currentTimeMillis() - this.time;
+        ((Count)metrics.get("Count")).inc_count = this.time;
         ((Count)metrics.get("Count")).lock();
     }
 }

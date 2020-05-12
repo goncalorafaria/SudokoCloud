@@ -297,7 +297,7 @@ public class CNode {
 
             long tmp = load - ((AtomicLong)v[LOAD]).get();
 
-            senddelta(tid, tmp, (String)v[SOLVER], (Integer)v[TURN]);
+            senddelta(tid, tmp, (String)v[SOLVER], ((AtomicInteger)v[TURN]).get() );
         }
 
         public void run() {
@@ -325,7 +325,7 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
-                            CNode.performBriefing();
+                            //CNode.performBriefing();
                         }
                     }
                     //Logger.log("Tunnel open");
