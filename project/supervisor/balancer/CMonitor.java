@@ -126,19 +126,19 @@ public class CMonitor {
                 exp += e.getLoad();
             }
             exp = exp / sep.size();
-            /*
+
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
                 go = true;
-                //Logger.log("discard:");
-                //schedulerecall(Collections.min(sep).vm);
+                Logger.log("discard:");
+                schedulerecall(Collections.min(sep).vm);
             }
 
             if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
                 go = true;
-                //Logger.log("summon:");
-                //CMonitor.summon();
+                Logger.log("summon:");
+                CMonitor.summon();
             }
-             */
+             
         }
     }
 
