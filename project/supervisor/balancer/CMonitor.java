@@ -300,6 +300,7 @@ public class CMonitor {
 
         private AtomicLong load = new AtomicLong(0L);
         private long lastLoad = 0;
+        private long lastLoadCount = 0;
 
         public Endpoint(String vm) {
             this.vm = vm;
@@ -325,11 +326,16 @@ public class CMonitor {
         private void discountLoad(long l){
             long tmp = load.addAndGet(-l);
 
-            if( tmp == this.lastLoad ){
-                load.set(-tmp);
+            if( tmp == lastLoad && lastLoadCount == 0) {
+                load.addAndGet(-tmp);
+                lastLoadCount++;
             }
 
-            this.lastLoad = tmp;
+            if( l != 0 )
+                lastLoadCount = 0;
+
+            lastLoad = tmp;
+
         }
         public void recall() {
             CMonitor.activevms.remove(vm);
