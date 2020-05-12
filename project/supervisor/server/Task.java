@@ -1,12 +1,14 @@
 package supervisor.server;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Task {
 
     private final String key;
+    private Long time = System.currentTimeMillis();;
 
-    private final Map<String, Metric> metrics = new HashMap<>();
+    private final Map<String, Metric> metrics = new ConcurrentHashMap<>();
 
     // TODO : Extend to various types of Metrics.
 
@@ -30,17 +32,9 @@ public class Task {
         return key;
     }
 
-    public static class Group {
-
-        private List<Task> q = new ArrayList<>();
-
-        public synchronized void add(Task t) {
-            q.add(t);
-        }
-
-        public synchronized void drainTo(Set<Task> repository) {
-            repository.addAll(q);
-            q = new ArrayList<>();
-        }
+    public void wrap(){
+        this.time = System.currentTimeMillis() - this.time;
+        ((Count)metrics.get("Count")).inc_count = this.time;
+        ((Count)metrics.get("Count")).lock();
     }
 }

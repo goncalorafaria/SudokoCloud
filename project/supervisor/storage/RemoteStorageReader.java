@@ -40,8 +40,57 @@ public class RemoteStorageReader {
             //);
         }
 
-        System.out.println(metrics);
-        //System.out.println("#####");
+        //System.out.println(metrics);
+
+        System.out.print("{");
+        int tf=0;
+
+        for( String k: metrics.keySet()){
+            if(tf!=0)
+                System.out.print(",");
+
+            tf++;
+
+            System.out.print("\""+k+"\":");
+            System.out.print("{");
+            int t = 0;
+            for( Integer un: metrics.get(k).keySet()) {
+                if (t != 0)
+                    System.out.print(",");
+
+                System.out.print(un + ":" + metrics.get(k).get(un).getV(4));
+                t++;
+            }
+            System.out.print("}");
+        }
+        System.out.print("}");
+
+        System.out.println("");
+
+        System.out.print("{");
+        tf = 0;
+        for( String k: metrics.keySet()){
+
+            if(tf!=0)
+                System.out.print(",");
+
+            tf++;
+
+            System.out.print("\""+k+"\":");
+            System.out.print("{");
+            int t = 0;
+            for( Integer un: metrics.get(k).keySet()) {
+                if (t != 0)
+                    System.out.print(",");
+
+                System.out.print(un + ":" + metrics.get(k).get(un).getlocked());
+                t++;
+            }
+            System.out.print("}");
+        }
+        System.out.print("}");
+
+        System.out.println("");
 
         //System.out.println(overhead);
 

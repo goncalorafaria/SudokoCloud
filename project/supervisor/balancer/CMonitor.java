@@ -17,6 +17,7 @@ import supervisor.util.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Thread.sleep;
 
@@ -39,6 +41,11 @@ public class CMonitor {
     private static final String instancetype = CloudStandart.instancetype;
     private static final String keyname = CloudStandart.keyname;
     private static final String securitygroups = CloudStandart.securitygroups;
+
+    private static final long idealThreashold = 200000;
+    private static final long ceilingThreashold = (int)(idealThreashold * 2);
+    private static final long scaleUpThreashold = (int)(idealThreashold * 1.5);
+    private static final long scaleDownThreashold = (int)(idealThreashold * 0.5);
 
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms = new AtomicInteger(0);
@@ -97,6 +104,8 @@ public class CMonitor {
         CMonitor.requestTable = new CachedRemoteStorage(
                 CloudStandart.taskStorage_tablename,
                 CloudStandart.taskStorage_tablekey);
+
+        CMonitor.serverRecovery();
     }
 
     /**
@@ -107,42 +116,30 @@ public class CMonitor {
     static void autoscale(int requests) {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
+        boolean go = true;
 
-        int s = 0;
-
-        int iddle = CMonitor.vmstates.size();
-
-        for (String vm : new HashSet<>(activevms)) {
-            Endpoint e = CMonitor.vmstates.get(vm);
-            a.add(e);
-            s += e.qsize.get();
-        }
-
-
-        if (requests + s + 1 < iddle) {
-            Iterator<CMonitor.Endpoint> it = a.iterator();
-
-            int min = Integer.MAX_VALUE;
-            String mvm = null;
-
-            while (it.hasNext()) {
-                CMonitor.Endpoint element = it.next();
-                int candidate = element.qsize.get();
-
-                if (candidate <= min) {
-                    min = candidate;
-                    mvm = element.vm;
-
-                }
+        while(go) {
+            double exp = 0;
+            go = false;
+            Collection<Endpoint> sep = vmstates.values();
+            for (Endpoint e : sep) {
+                exp += e.getLoad();
             }
-            schedulerecall(mvm);
-        }
+            exp = exp / sep.size();
 
-        if (requests + s >= 3 * iddle && iddle <= s/4 ) {
-            Logger.log("summon:");
-            CMonitor.summon();
-        }
+            if (exp <= scaleDownThreashold && activevms.size() > 1) {
+                go = true;
+                Logger.log("discard:");
+                schedulerecall(Collections.min(sep).vm);
+            }
 
+            if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
+                go = true;
+                Logger.log("summon:");
+                CMonitor.summon();
+            }
+             
+        }
     }
 
     /**
@@ -183,6 +180,11 @@ public class CMonitor {
         return newInstanceId;
     }
 
+    static void serverRecovery(){
+        for( String newInstanceId : getActiveInstances().keySet())
+            CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
+    }
+
     /**
      * Desliga uma VM assim que esta acabar de servir. */
     static void schedulerecall(String vmid) {
@@ -204,7 +206,6 @@ public class CMonitor {
         } catch (AmazonServiceException e) {
             Logger.log(e.toString());
         }
-
     }
 
     /** Decides to which machine to send the request.
@@ -214,44 +215,42 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
+        double iestimate = CMonitor.requestTable.estimate(s);
+        boolean go = true;
+
         Logger.log("branch count estimate: " +
-                CMonitor.requestTable.estimate(s)
-        );
+                iestimate);
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
 
-        while (tmp.size() == 0) {
-            Logger.log(".");
-            sleep(5000);
-            tmp.addAll(CMonitor.activevms);
-        }
+        CMonitor.Endpoint minx = null;
 
-        Set<CMonitor.Endpoint> a = new HashSet<>();
-
-        for (String vm : tmp) {
-            CMonitor.Endpoint element = CMonitor.
-                    vmstates.get(vm);
-            a.add(element);
-        }
-
-        Iterator<CMonitor.Endpoint> it = a.iterator();
-
-        int min = Integer.MAX_VALUE;
-        String mvm = null;
-
-        while (it.hasNext()) {
-            CMonitor.Endpoint element = it.next();
-            int candidate = element.qsize.get();
-
-            if (candidate <= min) {
-                min = candidate;
-                mvm = element.publicip;
-
+        while( go ) {
+            while (tmp.size() == 0) {
+                Logger.log(".");
+                sleep(5000);
+                tmp.addAll(CMonitor.activevms);
             }
+
+            Set<Endpoint> hset = new HashSet<>();
+            /* find min code */
+            for (CMonitor.Endpoint e : vmstates.values()) {
+                if (activevms.contains(e.vm))
+                    hset.add(e);
+            }
+            minx = Collections.min(hset);
+
+            go = ceilingThreashold <= minx.getLoad();
+
+
         }
 
-        return mvm;
+        Logger.log(" Load of selected server :" + minx.getLoad());
+
+        minx.scheduleLoad(iestimate);
+
+        return minx.publicip;
     }
 
     /**
@@ -299,19 +298,45 @@ public class CMonitor {
         private BufferedReader in;
         private Socket sc;
 
+        private AtomicLong load = new AtomicLong(0L);
+        private long lastLoad = 0;
+        private long lastLoadCount = 0;
+
         public Endpoint(String vm) {
             this.vm = vm;
             this.start();
         }
 
         /**
-         * Unsafe, causes deadlock.
+         * Unsafe, was causing deadlock.
          * */
         @Override
         public int compareTo(Endpoint o) {
-            return this.qsize.get() - o.qsize.get();
+
+            long mev = this.load.get();
+            long otherv = o.load.get();
+
+            return (int)(mev-otherv);
         }
 
+        public long getLoad(){ return load.get();}
+
+        public void scheduleLoad(double l) { load.addAndGet((long)l); }
+
+        private void discountLoad(long l){
+            long tmp = load.addAndGet(-l);
+
+            if( tmp == lastLoad && lastLoadCount == 0) {
+                load.addAndGet(-tmp);
+                lastLoadCount++;
+            }
+
+            if( l != 0 )
+                lastLoadCount = 0;
+
+            lastLoad = tmp;
+
+        }
         public void recall() {
             CMonitor.activevms.remove(vm);
             this.active.getAndSet(false);
@@ -369,17 +394,37 @@ public class CMonitor {
         }
 
         private void fetching() throws IOException {
-            this.qsize.getAndAdd(
-                    Integer.parseInt(
-                            in.readLine()));
+            String[] args = in.readLine().split(":");
 
-            Logger.log("<" + this.vm + ">" + this.qsize.get());
+            switch (args[0]){
+                case "queue" :
+                    this.qsize.getAndAdd(
+                            Integer.parseInt(
+                                    args[1]));
+                    Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.qsize.get());
+                    break;
+                case "loadreport" :
+                    long tmp = Long.parseLong(
+                            args[1]);
+                    this.discountLoad(tmp);
+                    Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
+                    break;
+                case "fault-key":
+                    double est = CMonitor.requestTable.estimate(args[1]);
+                    this.scheduleLoad(est);
+                    Logger.log("fault-key" + ":" + args[1] + ":" + est);
+                    break;
+                default: Logger.log(args[0]);
+            }
+
         }
 
         private boolean calling() {
             boolean c = true;
             try {
                 this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
+                sc.setTcpNoDelay(true);
+
                 c = false;
 
                 this.sc.setSoTimeout(20 * 1000);
