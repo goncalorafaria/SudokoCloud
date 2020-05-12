@@ -324,9 +324,6 @@ public class CMonitor {
         private void discountLoad(long l){
             long tmp = load.addAndGet(-l);
 
-            if( tmp < 0)
-                load.addAndGet(-tmp);
-
         }
         public void recall() {
             CMonitor.activevms.remove(vm);
@@ -414,6 +411,8 @@ public class CMonitor {
             boolean c = true;
             try {
                 this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
+                sc.setTcpNoDelay(true);
+
                 c = false;
 
                 this.sc.setSoTimeout(20 * 1000);

@@ -100,12 +100,13 @@ public class CNode {
 
     public static void performBriefing(){
         Set< Map.Entry<Long,Task> > ss = CNode.activetasks.entrySet();
-
+        double sest = 0.0;
         for( Map.Entry<Long,Task> tuple : ss){
             Count c = (Count)tuple.getValue().getMetric("Count");
             long v = c.getlocked();
-            CNode.tunnel.briefing(tuple.getKey(),v);
+            sest += CNode.tunnel.briefing(tuple.getKey(),v);
         }
+        CNode.tunnel.sendbriefing(sest);
     }
     public static Task getTask() {
         return CNode.getTask(Thread.currentThread().getId());
@@ -207,7 +208,11 @@ public class CNode {
             lbq.add("queue:"+"1");
         }
 
-        public void briefing(long tid, double value){
+        void sendbriefing(double value){
+            lbq.add("loadreport:" + ((long)value));
+        }
+
+        public double briefing(long tid, double value){
             Object[] v = deltaset.get(tid);
 
             AtomicLong al = (AtomicLong)v[LOAD];
@@ -215,11 +220,13 @@ public class CNode {
 
             long delta = ((long)value-al.get());
 
-            senddelta(tid, delta, solver,((AtomicInteger)v[TURN]).get());
+            //(AtomicInteger)v[TURN]).get()
+            double est = senddelta(tid, delta, solver,1);
 
-            ((AtomicInteger)v[TURN]).weakCompareAndSet(0,1);
+            ((AtomicInteger)v[TURN]).getAndIncrement();
 
             al.addAndGet(delta);
+            return est;
         }
 
         private void recovery(){
@@ -265,7 +272,7 @@ public class CNode {
             //####################### BADASS MODE OFF
         }
 
-        private void senddelta(long tid, long delta, String solver, int turn){
+        private double senddelta(long tid, long delta, String solver, int turn){
             double est = (double)delta;
             int fixed = 0;
             //String solver = "BFS";
@@ -287,8 +294,9 @@ public class CNode {
                         est = ((delta*0.00430531+ fixed*75100.9879752195)*0.09105526 + fixed*556.56763109) * 12.88852179 + fixed*14068.78484095;
                         break;
                 }
-                lbq.add("loadreport:" + ((long) est));
+                return est;
             }
+            return 0;
         }
 
         public void decrement(long tid, long load) {
@@ -297,7 +305,10 @@ public class CNode {
 
             long tmp = load - ((AtomicLong)v[LOAD]).get();
 
-            senddelta(tid, tmp, (String)v[SOLVER], ((AtomicInteger)v[TURN]).get() );
+            // ((AtomicInteger)v[TURN]).get()
+            double est = senddelta(tid, tmp, (String)v[SOLVER], 0);
+
+            sendbriefing(est);
         }
 
         public void run() {
@@ -306,7 +317,7 @@ public class CNode {
             while(true) {
                 try {
                     Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
-
+                    sc.setTcpNoDelay(true);
                     this.out = new PrintWriter(
                             sc.getOutputStream()
                     );
@@ -325,7 +336,7 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
-                            //CNode.performBriefing();
+                            CNode.performBriefing();
                         }
                     }
                     //Logger.log("Tunnel open");
