@@ -98,21 +98,17 @@ public class CNode {
                 ((Count)t.getMetric("Count")).getlocked());
     }
 
-    public static double performBriefing(){
+    public static void performBriefing(){
 
-        if( CNode.tunnel.sendBool.get() ) {
-            Set<Map.Entry<Long, Task>> ss = CNode.activetasks.entrySet();
-            double sest = 0.0;
-            for (Map.Entry<Long, Task> tuple : ss) {
-                Count c = (Count) tuple.getValue().getMetric("Count");
-                long v = c.getlocked();
-                sest += CNode.tunnel.briefing(tuple.getKey(), v);
-            }
-            CNode.tunnel.sendbriefing(sest);
-            return sest;
-        }else {
-            return 0;
+        Set<Map.Entry<Long, Task>> ss = CNode.activetasks.entrySet();
+        double sest = 0.0;
+        for (Map.Entry<Long, Task> tuple : ss) {
+            Count c = (Count) tuple.getValue().getMetric("Count");
+            long v = c.getlocked();
+            sest += CNode.tunnel.briefing(tuple.getKey(), v);
         }
+        CNode.tunnel.sendbriefing(sest);
+
     }
     public static Task getTask() {
         return CNode.getTask(Thread.currentThread().getId());
@@ -194,8 +190,6 @@ public class CNode {
         private static int LOAD = 0;
         private static int SOLVER = 1;
         private static int TURN = 2;
-
-        public AtomicBoolean sendBool = new AtomicBoolean(true);
 
         public EndPoint() {
             this.start();
@@ -336,7 +330,7 @@ public class CNode {
                     }
 
                     String message;
-                    long zcount = 0;
+
                     while (true) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
@@ -344,15 +338,7 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
-                            double est = CNode.performBriefing();
-                            int sz = CNode.activetasks.size();
-
-                            if( est < 1)
-                                zcount++;
-                            else
-                                zcount = 0;
-
-                            this.sendBool.set( zcount < 2 || sz > 0);
+                            CNode.performBriefing();
                         }
                     }
                     //Logger.log("Tunnel open");
