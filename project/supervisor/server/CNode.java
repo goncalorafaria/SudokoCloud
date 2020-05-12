@@ -97,12 +97,14 @@ public class CNode {
         CNode.tunnel.decrement(tid,
                 ((Count)t.getMetric("Count")).getlocked());
     }
+
     public static void performBriefing(){
         Set< Map.Entry<Long,Task> > ss = CNode.activetasks.entrySet();
 
         for( Map.Entry<Long,Task> tuple : ss){
             Count c = (Count)tuple.getValue().getMetric("Count");
-            CNode.tunnel.briefing(tuple.getKey(),c.getlocked());
+            long v = c.getlocked();
+            CNode.tunnel.briefing(tuple.getKey(),v);
         }
     }
     public static Task getTask() {
@@ -208,8 +210,8 @@ public class CNode {
         public void briefing(long tid, double value){
             Object[] v = deltaset.get(tid);
 
-            AtomicLong al = (AtomicLong) v[LOAD];
-            String solver= (String)v[SOLVER];
+            AtomicLong al = (AtomicLong)v[LOAD];
+            String solver = (String)v[SOLVER];
 
             long delta = ((long)value-al.get());
 
