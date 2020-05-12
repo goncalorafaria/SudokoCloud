@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class CNode {
@@ -131,31 +132,38 @@ public class CNode {
 
                 try {
                     //Logger.log("Publisher:Halt");
-                    Task itask = CNode.taskq.take();
-                    String tsk = itask.getKey();
+                    Task itask = CNode.taskq.poll(
+                            20,
+                            TimeUnit.SECONDS);
 
-                    Map<String, String> row;
+                    if( itask != null ) {
+                        String tsk = itask.getKey();
 
-                    row = requestTable.get(tsk);
-                    if( row == null)
-                        row = new HashMap<>();
+                        Map<String, String> row;
+
+                        row = requestTable.get(tsk);
+                        if (row == null)
+                            row = new HashMap<>();
 
 
-                    for (String mname : itask.metricsK()) {
+                        for (String mname : itask.metricsK()) {
 
-                        Metric m = itask.getMetric(mname);
-                        Count c = (Count) m;
+                            Metric m = itask.getMetric(mname);
+                            Count c = (Count) m;
 
-                        if (c.valid()) {
-                            if (row.containsKey(mname)) {
-                                Count cold = Count.fromString(row.get(mname));
-                                cold.aggregate(c);
-                                c = cold;
+                            if (c.valid()) {
+                                if (row.containsKey(mname)) {
+                                    Count cold = Count.fromString(row.get(mname));
+                                    cold.aggregate(c);
+                                    c = cold;
+                                }
+                                row.put(mname, c.toBinary());
                             }
-                            row.put(mname, c.toBinary());
                         }
+                        requestTable.put(tsk, row);
+                    }else{
+                        CNode.performBriefing();
                     }
-                    requestTable.put(tsk, row);
 
                 } catch (InterruptedException e) {
                     Logger.log(e.getMessage());
@@ -191,7 +199,7 @@ public class CNode {
             Object[] v = new Object[3];
             v[LOAD] = new AtomicLong(0L);
             v[SOLVER] = solver;
-            v[TURN] = Integer.valueOf(0);
+            v[TURN] = new AtomicInteger(0);
 
             deltaset.put(
                     tid,
@@ -209,10 +217,9 @@ public class CNode {
 
             long delta = ((long)value-al.get());
 
-            senddelta(tid, delta, solver,(Integer)v[TURN]);
+            senddelta(tid, delta, solver,((AtomicInteger)v[TURN]).get());
 
-            v[TURN] = Integer.valueOf(
-                    ((Integer)v[TURN]) + 1);
+            ((AtomicInteger)v[TURN]).getAndIncrement();
 
             al.addAndGet(delta);
         }
@@ -235,7 +242,8 @@ public class CNode {
                         break;
 
                     case "DLX":
-                        est = (delta * 24.39689662 - fixed*1392680.19952047)/100;
+                        // delta *0.005052572765698524 + fixed*109378.21280323979
+                        est = ((delta*0.00430531+ fixed*75100.9879752195)*0.09105526 + fixed*556.56763109) * 12.88852179 + fixed*14068.78484095;
                         break;
                 }
                 lbq.add("loadreport:" + ((long) est));
@@ -262,13 +270,9 @@ public class CNode {
                 String message;
 
                 while (true){
-                    message = this.lbq.poll(20, TimeUnit.SECONDS);
-                    if( message == null){
-                        //CNode.performBriefing();
-                    }else{
-                        this.out.println(message);
-                        this.out.flush();
-                    }
+                    message = this.lbq.take();
+                    this.out.println(message);
+                    this.out.flush();
                 }
                 //Logger.log("Tunnel open");
 
