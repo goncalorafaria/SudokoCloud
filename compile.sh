@@ -14,7 +14,7 @@ javac tools/*.java
 javac project/supervisor/balancer/*.java
 javac project/supervisor/server/*.java 
 javac project/supervisor/storage/*.java 
-javac project/supervisor/storage/remote/*.java 
+javac project/supervisor/balancer/estimation/*.java 
 javac project/supervisor/util/*.java   
 
 # Making sure the folders required by the instrumentation exist

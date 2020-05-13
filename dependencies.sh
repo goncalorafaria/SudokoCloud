@@ -1,5 +1,3 @@
-source local_dependencies.sh
-
 
 ## compiler options
 export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
