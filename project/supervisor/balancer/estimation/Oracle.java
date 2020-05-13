@@ -2,9 +2,9 @@ package supervisor.balancer.estimation;
 
 import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Oracle {
@@ -14,13 +14,18 @@ public class Oracle {
 
     private final TaskStorage remote = new TaskStorage();
 
-    private final AtomicInteger max = new AtomicInteger(0);
-    private final AtomicInteger hitmax = new AtomicInteger(0);
+    private final AtomicInteger nelements = new AtomicInteger(0);
 
-    public Oracle() {
+    private final TreeSet<Group> treesize =
+            new TreeSet<>();
+
+    private final int extra;
+
+    public Oracle( int extra ) {
         cachestructure.put("BFS", new ConcurrentHashMap<String, Group>());
         cachestructure.put("DLX", new ConcurrentHashMap<String, Group>());
         cachestructure.put("CP", new ConcurrentHashMap<String, Group>());
+        this.extra = extra;
     }
 
     public String describe() {
@@ -30,6 +35,7 @@ public class Oracle {
     public void destroy() {
         cachestructure.clear();
         remote.destroy();
+        treesize.clear();
     }
 
     private Group replenish(String key, String solver,String board,String un) {
@@ -37,7 +43,7 @@ public class Oracle {
         Group g;
 
         if (!mg.containsKey(board)) {
-            g = new Group(max,hitmax);
+            g = new Group();
             mg.put(board, g);
         } else {
             g = mg.get(board);
@@ -45,25 +51,15 @@ public class Oracle {
 
         if (g.shouldUpdate(un)) {
             Map<String, String> value = remote.get(key);
-            int tmp = g.put(un, value);
-
-            boolean b = false;
-            while(!b){
-                int m = max.get();
-                if( m <= tmp )
-                    b = max.compareAndSet(m,tmp);
-                else
-                    b=true;
-            }
-
-            tmp = g.getHit();
-            b = false;
-            while(!b){
-                int m = hitmax.get();
-                if( m <= tmp )
-                    b = hitmax.compareAndSet(m,tmp);
-                else
-                    b=true;
+            int inc = g.put(un, value);
+            int cur = nelements.addAndGet(inc);
+            if( inc == 1 ){
+                synchronized (this.treesize){
+                    this.treesize.remove(g);
+                    this.treesize.add(g);
+                    if( cur > extra )
+                        trim();
+                }
             }
         }
 
@@ -72,7 +68,6 @@ public class Oracle {
 
     public double predict(String key){
         String[] sv = key.split(":");
-        //String classe = sv[0] + ":" + sv[2] + ":" + sv[3];
         String solver = sv[0];
         String board = sv[2] + ":" + sv[3];
         String un = sv[1];
@@ -91,8 +86,13 @@ public class Oracle {
         return est;
     }
 
-    public void trim(){
-        Logger.log
+    private void trim(){
+        Group g = this.treesize.first();
+        if ( g.trim() ){
+            nelements.decrementAndGet();
+        }
+        this.treesize.remove(g);
+        this.treesize.add(g);
     }
 
 }

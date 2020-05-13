@@ -18,11 +18,9 @@ public class Group implements Comparable<Group>{
     private final Lock wl = rwl.writeLock();
     ConcurrentHashMap<String,Element> table = new ConcurrentHashMap<>();
     ConcurrentSkipListSet<Element> rcvl = new ConcurrentSkipListSet<>();
-    private final AtomicInteger max;
-    private final AtomicInteger hitmax;
 
     private final BinaryStochasticBanditProblem bscp =
-            new BinaryStochasticBanditProblem(0.5);
+            new BinaryStochasticBanditProblem(0.05);
 
     static class Element implements Comparable<Element> {
         private final BinaryStochasticBanditProblem ucb =
@@ -70,9 +68,7 @@ public class Group implements Comparable<Group>{
         }
     }
 
-    public Group(AtomicInteger max,AtomicInteger hitmax){
-        this.max = max;
-        this.hitmax = hitmax;
+    public Group(){
     }
 
     public int getHit(){
@@ -102,13 +98,16 @@ public class Group implements Comparable<Group>{
                 rcvl.remove(e);
                 e.update(value);
                 rcvl.add(e);
+                return 0;
             }else {
                 e = new Element(value);
                 rcvl.add(e);
                 table.put(key, e);
+                if( table.size() > 2)
+                    return 1;
+                else
+                    return 0;
             }
-
-            return rcvl.size();
 
         }finally {
             wl.unlock();
@@ -147,8 +146,7 @@ public class Group implements Comparable<Group>{
                 return true;
 
             if( table.containsKey(un) ){
-                boolean b = table.get(un).shouldUpdate();
-                return b;
+                return table.get(un).shouldUpdate();
             }else{
                 return bscp.shouldUpdate();
             }
@@ -262,17 +260,21 @@ public class Group implements Comparable<Group>{
         ll.add(o.rl);
         Arrays.sort(ll.toArray());
 
-        int hm = this.hitmax.get();
-        int m = this.max.get();
-
         try {
             for( Lock l : ll)
                 l.lock();
 
-        float th = this.getScore(m,hm);
-        float oh = o.getScore(m,hm);
+        int th = this.size();
+        int oh = o.size();
 
-        return Float.compare(th, oh);
+        if( th == oh ){
+            th = this.getHit();
+            oh = o.getHit();
+
+            return Integer.compare(th,oh);
+        }
+
+        return Integer.compare(oh, th);
 
         }finally {
             for( Lock l : ll)

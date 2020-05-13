@@ -101,7 +101,7 @@ public class CMonitor {
 
         TaskStorage.init(false);
 
-        CMonitor.requestTable = new Oracle();
+        CMonitor.requestTable = new Oracle(10);
 
         CMonitor.serverRecovery();
     }
