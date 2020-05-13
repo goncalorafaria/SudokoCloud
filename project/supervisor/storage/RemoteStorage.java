@@ -8,13 +8,18 @@ import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import supervisor.util.CloudStandart;
 
 import java.io.File;
 import java.util.*;
+import supervisor.storage.Storage;
 
 public class RemoteStorage implements Storage<String> {
 
@@ -224,4 +229,36 @@ public class RemoteStorage implements Storage<String> {
 
         return (r.getItems().size() > 0);
     }
+
+    public List<Map<String, String>> getAll(){
+        setup();
+
+        List<Map<String, String>> l = new ArrayList<>();
+        Table r = new Table( dynamoDB, table);
+
+        try {
+            ItemCollection<ScanOutcome> items = r.scan(new ScanSpec());
+
+            Iterator<Item> iter = items.iterator();
+            while (iter.hasNext()) {
+                Item item = iter.next();
+                Map<String, String> it = new HashMap<>();
+                for (Map.Entry<String, Object> tp :item.asMap().entrySet()) {
+                    String av = (String) tp.getValue();
+                    it.put(
+                            tp.getKey(),
+                            av
+                    );
+                    l.add(it);
+                    //System.out.println(av);
+                }
+            }
+        }
+        catch (Exception e) {
+            System.err.println("Unable to scan the table:");
+            System.err.println(e.getMessage());
+        }
+        return l;
+    }
+
 }

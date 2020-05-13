@@ -1,6 +1,7 @@
 package supervisor.storage;
 
 import supervisor.server.Count;
+import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 
 import java.io.IOException;
@@ -12,11 +13,9 @@ public class RemoteStorageReader {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         CloudStandart.init();
-        CachedRemoteStorage.init(false);
+        TaskStorage.init(false);
 
-        CachedRemoteStorage a = new CachedRemoteStorage(
-                CloudStandart.taskStorage_tablename,
-                CloudStandart.taskStorage_tablekey);
+        TaskStorage a = new TaskStorage();
 
         Map<String, Map<Integer, Count>> metrics = new HashMap<>();
         Map<String, Map<Integer, Count>> overhead = new HashMap<>();

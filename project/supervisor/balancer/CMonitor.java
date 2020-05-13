@@ -10,14 +10,13 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
-import supervisor.storage.CachedRemoteStorage;
+import supervisor.balancer.estimation.Oracle;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -54,7 +53,7 @@ public class CMonitor {
     private static final Map<String, CMonitor.Endpoint> vmstates = new ConcurrentSkipListMap<>();
 
     /* Storage persistente que guarda o historico das metricas para cada pedido. */
-    private static CachedRemoteStorage requestTable;
+    private static Oracle requestTable;
 
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
     private final static Set<String> activevms = new ConcurrentSkipListSet<>();
@@ -99,11 +98,7 @@ public class CMonitor {
                     e);
         }
 
-        CachedRemoteStorage.init(false);
-
-        CMonitor.requestTable = new CachedRemoteStorage(
-                CloudStandart.taskStorage_tablename,
-                CloudStandart.taskStorage_tablekey);
+        CMonitor.requestTable = new Oracle();
 
         CMonitor.serverRecovery();
     }
@@ -215,11 +210,12 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
-        double iestimate = CMonitor.requestTable.estimate(s);
+        double iestimate = CMonitor.requestTable.predict(s);
         boolean go = true;
 
         Logger.log("branch count estimate: " +
-                iestimate);
+                iestimate
+        );
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
@@ -410,7 +406,7 @@ public class CMonitor {
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
                     break;
                 case "fault-key":
-                    double est = CMonitor.requestTable.estimate(args[1]);
+                    double est = CMonitor.requestTable.predict(args[1]);
                     this.scheduleLoad(est);
                     Logger.log("fault-key" + ":" + args[1] + ":" + est);
                     break;

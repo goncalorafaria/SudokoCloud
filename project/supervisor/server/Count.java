@@ -5,7 +5,7 @@ import com.amazonaws.util.Base64;
 import java.io.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class Count extends Metric implements java.io.Serializable {
+public class Count implements java.io.Serializable {
 
     long i_count = 0;
     long b_count = 0;
@@ -18,6 +18,18 @@ public class Count extends Metric implements java.io.Serializable {
     long n = 1;
 
     public Count() {
+    }
+
+    public Count(Count c){
+        i_count = c.i_count;
+        b_count = c.b_count;
+        m_count = c.m_count;
+        br_count = c.br_count;
+        inc_count = c.inc_count;
+        br_s = c.br_s;
+        long lx = c.br_count_act.get();
+        br_count_act.set(lx);
+        n = c.n;
     }
 
     public static Count fromString(String s) throws IOException, ClassNotFoundException {

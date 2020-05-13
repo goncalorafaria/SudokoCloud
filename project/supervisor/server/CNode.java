@@ -1,6 +1,5 @@
 package supervisor.server;
 
-import supervisor.balancer.CMonitor;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
@@ -9,7 +8,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -151,8 +149,7 @@ public class CNode {
 
                     for (String mname : itask.metricsK()) {
 
-                        Metric m = itask.getMetric(mname);
-                        Count c = (Count) m;
+                        Count c = itask.getMetric(mname);
 
                         if (c.valid()) {
                             if (row.containsKey(mname)) {
