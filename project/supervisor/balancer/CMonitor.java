@@ -11,6 +11,7 @@ import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
 import supervisor.balancer.estimation.Oracle;
+import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
@@ -98,6 +99,8 @@ public class CMonitor {
                     e);
         }
 
+        TaskStorage.init(false);
+
         CMonitor.requestTable = new Oracle();
 
         CMonitor.serverRecovery();
@@ -176,6 +179,7 @@ public class CMonitor {
     }
 
     static void serverRecovery(){
+
         for( String newInstanceId : getActiveInstances().keySet())
             CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
     }
@@ -374,7 +378,6 @@ public class CMonitor {
                     //Logger.log(e.toString());
                 }
             }
-
             this.recalling();
         }
 

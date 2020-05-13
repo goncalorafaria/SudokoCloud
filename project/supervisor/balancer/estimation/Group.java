@@ -3,26 +3,30 @@ package supervisor.balancer.estimation;
 import supervisor.server.Count;
 
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-
-import java.util.Map;
-
-public class Group {
+public class Group implements Comparable<Group>{
 
     ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    private final Lock rl = rwl.readLock();
+    final Lock rl = rwl.readLock();
     private final Lock wl = rwl.writeLock();
     ConcurrentHashMap<String,Element> table = new ConcurrentHashMap<>();
-    private final BinaryStochasticBanditProblem bscp = new BinaryStochasticBanditProblem(0.1);
+    ConcurrentSkipListSet<Element> rcvl = new ConcurrentSkipListSet<>();
+    private final AtomicInteger max;
+    private final AtomicInteger hitmax;
 
-    static class Element {
-        private final BinaryStochasticBanditProblem ucb = new BinaryStochasticBanditProblem(0.1);
+    private final BinaryStochasticBanditProblem bscp =
+            new BinaryStochasticBanditProblem(0.5);
+
+    static class Element implements Comparable<Element> {
+        private final BinaryStochasticBanditProblem ucb =
+                new BinaryStochasticBanditProblem(0.1);
         private Count c;
 
         Element(Map<String, String> value) {
@@ -56,6 +60,28 @@ public class Group {
                 e.printStackTrace();
             }
         }
+
+        @Override
+        public int compareTo(Element o) {
+            int th = this.ucb.getHit();
+            int oh = o.ucb.getHit();
+
+            return Integer.compare(th, oh);
+        }
+    }
+
+    public Group(AtomicInteger max,AtomicInteger hitmax){
+        this.max = max;
+        this.hitmax = hitmax;
+    }
+
+    public int getHit(){
+        try {
+            rl.lock();
+            return bscp.getHit();
+        }finally {
+            rl.unlock();
+        }
     }
 
     public boolean contains(String key){
@@ -67,19 +93,36 @@ public class Group {
         }
     }
 
-    public void put(String key, Map<String,String> value ){
+    public int put(String key, Map<String,String> value ){
         try {
             wl.lock();
-
+            Element e;
             if( table.containsKey(key) ){
-                Element e = table.get(key);
+                e = table.get(key);
+                rcvl.remove(e);
                 e.update(value);
+                rcvl.add(e);
             }else {
-                table.put(key, new Element(value));
+                e = new Element(value);
+                rcvl.add(e);
+                table.put(key, e);
             }
+
+            return rcvl.size();
 
         }finally {
             wl.unlock();
+        }
+    }
+
+    float getScore(int m, int hm){
+        try {
+            rl.lock();
+            float pm  = this.rcvl.size()/(float)m;
+            float phm = this.bscp.getHit()/(float)hm;
+            return hm-pm;
+        }finally {
+            rl.unlock();
         }
     }
 
@@ -139,72 +182,117 @@ public class Group {
     }
 
     public List<Object[]> getNearbyPair(String un){
-        int target = Integer.parseInt(un);
-        int before = Integer.MIN_VALUE;
-        int after = Integer.MAX_VALUE;
-        List<Object[]> l = new LinkedList<>();
+        try {
+            rl.lock();
 
-        int fst = -1;
-        int snd = -1;
-        float dif;
-        float fstv=Float.MAX_VALUE;
-        float sndv=Float.MAX_VALUE;
+            int target = Integer.parseInt(un);
+            int before = Integer.MIN_VALUE;
+            int after = Integer.MAX_VALUE;
+            List<Object[]> l = new LinkedList<>();
 
-        Set<String> ks = table.keySet();
+            int fst = -1;
+            int snd = -1;
+            float dif;
+            float fstv = Float.MAX_VALUE;
+            float sndv = Float.MAX_VALUE;
 
-        for( String k : ks ){
-            int candidate = Integer.parseInt(k);
-            if( candidate < target ){
-                if( before < candidate )
-                    before = candidate;
-            }else{
-                if( candidate < after )
-                    after = candidate;
-            }
+            Set<String> ks = table.keySet();
 
-            dif = (candidate - target);
-            dif = dif*dif;
-
-            if( fst != -1 && snd != -1){
-                if (dif <= fstv) {
-                    fst = candidate;
-                    fstv = dif;
+            for (String k : ks) {
+                int candidate = Integer.parseInt(k);
+                if (candidate < target) {
+                    if (before < candidate)
+                        before = candidate;
                 } else {
-                    if (dif < sndv) {
+                    if (candidate < after)
+                        after = candidate;
+                }
+
+                dif = (candidate - target);
+                dif = dif * dif;
+
+                if (fst != -1 && snd != -1) {
+                    if (dif <= fstv) {
+                        fst = candidate;
+                        fstv = dif;
+                    } else {
+                        if (dif < sndv) {
+                            snd = candidate;
+                            sndv = dif;
+                        }
+                    }
+                } else {
+                    if (fst == -1) {
+                        fst = candidate;
+                        fstv = dif;
+                    } else {
                         snd = candidate;
                         sndv = dif;
                     }
                 }
-            }else{
-                if(fst == -1){
-                    fst = candidate;
-                    fstv = dif;
-                }else {
-                    snd = candidate;
-                    sndv = dif;
-                }
             }
+
+            l.add(new Object[2]);
+            l.add(new Object[2]);
+            String sbefore, safter;
+
+            if (before == Integer.MIN_VALUE || after == Integer.MAX_VALUE) {
+                sbefore = String.valueOf(fst);
+                safter = String.valueOf(snd);
+            } else {
+                sbefore = String.valueOf(before);
+                safter = String.valueOf(after);
+            }
+
+            l.get(0)[0] = sbefore;
+            l.get(0)[1] = this.get(sbefore);
+            l.get(1)[0] = safter;
+            l.get(1)[1] = this.get(safter);
+
+            return l;
+        }finally {
+            rl.unlock();
         }
-
-        l.add(new Object[2]);
-        l.add(new Object[2]);
-        String sbefore, safter;
-
-        if(before == Integer.MIN_VALUE || after == Integer.MAX_VALUE){
-            sbefore = String.valueOf(fst);
-            safter = String.valueOf(snd);
-        }else{
-            sbefore = String.valueOf(before);
-            safter = String.valueOf(after);
-        }
-
-        l.get(0)[0]=sbefore;
-        l.get(0)[1]=this.get(sbefore);
-        l.get(1)[0]=safter;
-        l.get(1)[1]=this.get(safter);
-
-        return l;
     }
 
+    @Override
+    public int compareTo(Group o) {
+        List<Lock> ll = new LinkedList<>();
+        ll.add(rl);
+        ll.add(o.rl);
+        Arrays.sort(ll.toArray());
+
+        int hm = this.hitmax.get();
+        int m = this.max.get();
+
+        try {
+            for( Lock l : ll)
+                l.lock();
+
+        float th = this.getScore(m,hm);
+        float oh = o.getScore(m,hm);
+
+        return Float.compare(th, oh);
+
+        }finally {
+            for( Lock l : ll)
+                l.unlock();
+        }
+    }
+
+    public boolean trim(){
+        try {
+            wl.lock();
+            if( rcvl.size() > 2){
+                Element e = rcvl.first();
+                rcvl.remove(e);
+                return true;
+            }else{
+                return false;
+            }
+        }finally {
+            wl.unlock();
+        }
+    }
 }
 

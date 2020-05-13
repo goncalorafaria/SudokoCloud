@@ -5,6 +5,7 @@ import supervisor.storage.TaskStorage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Oracle {
     
@@ -13,12 +14,13 @@ public class Oracle {
 
     private final TaskStorage remote = new TaskStorage();
 
-    public Oracle() {
-        cachestructure.put("BFS", new ConcurrentHashMap<>());
-        cachestructure.put("DLX", new ConcurrentHashMap<>());
-        cachestructure.put("CP", new ConcurrentHashMap<>());
+    private final AtomicInteger max = new AtomicInteger(0);
+    private final AtomicInteger hitmax = new AtomicInteger(0);
 
-        TaskStorage.init(false);
+    public Oracle() {
+        cachestructure.put("BFS", new ConcurrentHashMap<String, Group>());
+        cachestructure.put("DLX", new ConcurrentHashMap<String, Group>());
+        cachestructure.put("CP", new ConcurrentHashMap<String, Group>());
     }
 
     public String describe() {
@@ -35,7 +37,7 @@ public class Oracle {
         Group g;
 
         if (!mg.containsKey(board)) {
-            g = new Group();
+            g = new Group(max,hitmax);
             mg.put(board, g);
         } else {
             g = mg.get(board);
@@ -43,7 +45,26 @@ public class Oracle {
 
         if (g.shouldUpdate(un)) {
             Map<String, String> value = remote.get(key);
-            g.put(un, value);
+            int tmp = g.put(un, value);
+
+            boolean b = false;
+            while(!b){
+                int m = max.get();
+                if( m <= tmp )
+                    b = max.compareAndSet(m,tmp);
+                else
+                    b=true;
+            }
+
+            tmp = g.getHit();
+            b = false;
+            while(!b){
+                int m = hitmax.get();
+                if( m <= tmp )
+                    b = hitmax.compareAndSet(m,tmp);
+                else
+                    b=true;
+            }
         }
 
         return g;
@@ -70,6 +91,8 @@ public class Oracle {
         return est;
     }
 
-
+    public void trim(){
+        Logger.log
+    }
 
 }
