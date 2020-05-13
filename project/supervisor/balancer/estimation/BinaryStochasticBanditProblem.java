@@ -24,6 +24,11 @@ public class BinaryStochasticBanditProblem {
         totalc.addAndGet(1);
     }
 
+    public void setUpdate(long n){
+        int old = updatec.getAndSet((int)n);
+        totalc.addAndGet((int)n - old);
+    }
+
     double hitScore(){
         return base + Math.sqrt(2*Math.log(totalc.get())/hitc.get());
     }

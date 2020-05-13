@@ -21,7 +21,6 @@ public class Group {
     ConcurrentHashMap<String,Element> table = new ConcurrentHashMap<>();
     private final BinaryStochasticBanditProblem bscp = new BinaryStochasticBanditProblem(0.1);
 
-
     static class Element {
         private final BinaryStochasticBanditProblem ucb = new BinaryStochasticBanditProblem(0.1);
         private Count c;
@@ -29,6 +28,7 @@ public class Group {
         Element(Map<String, String> value) {
             try {
                 this.c = Count.fromString(value.get("Count"));
+                ucb.setUpdate(c.n);
             } catch (IOException e) {
                 e.printStackTrace();
             }catch (ClassNotFoundException e){
@@ -49,6 +49,7 @@ public class Group {
 
             try {
                 this.c = Count.fromString(value.get("Count"));
+                ucb.setUpdate(c.n);
             } catch (IOException e) {
                 e.printStackTrace();
             }catch (ClassNotFoundException e){

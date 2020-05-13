@@ -15,7 +15,7 @@ public class Count implements java.io.Serializable {
     double br_s = 0;
     AtomicLong br_count_act = new AtomicLong(0L);
 
-    long n = 1;
+    public long n = 1;
 
     public Count() {
     }
