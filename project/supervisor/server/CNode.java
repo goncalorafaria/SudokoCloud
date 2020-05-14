@@ -345,9 +345,7 @@ public class CNode {
                             this.out.flush();
                         } else {
                             CNode.performBriefing();
-                            Logger.log(sc.isConnected()+ ":STATE");
 
-                            //this.in.
                             if( this.in.hasNext() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
