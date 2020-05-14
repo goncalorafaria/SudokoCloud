@@ -327,7 +327,6 @@ public class CNode {
                     Socket sc = ssc.accept();
                     Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
-                    //this.out.println("begin:");
                     boolean go = true;
 
                     this.out = new PrintWriter(
@@ -339,6 +338,8 @@ public class CNode {
                                    sc.getInputStream()
                            )
                     );
+
+                    this.out.println("begin:");
 
                     if(downed) {
                         this.recovery();

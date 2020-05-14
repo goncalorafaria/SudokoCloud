@@ -442,7 +442,7 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
-                //this.in.readLine();
+                this.in.readLine();
 
                 Logger.log("Tunnel open");
 
