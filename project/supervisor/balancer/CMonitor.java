@@ -442,6 +442,8 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
+                this.in.readLine();
+
                 Logger.log("Tunnel open");
 
             } catch (UnknownHostException e) {

@@ -327,6 +327,7 @@ public class CNode {
                     Socket sc = ssc.accept();
                     Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
+                    this.out.println("begin:");
                     boolean go = true;
 
                     this.out = new PrintWriter(
@@ -370,7 +371,7 @@ public class CNode {
                                 mcounter++;
                             }
 
-                            if( mcounter > 5*3 ){
+                            if( mcounter > 1*3 ){
                                 go = false;
                                 downed = true;
                                 sc.close();
