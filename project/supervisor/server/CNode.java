@@ -4,13 +4,16 @@ import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -177,6 +180,7 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private PrintWriter out=null;
+        private Scanner in;
 
         private final BlockingQueue<String> lbq
                 = new LinkedBlockingQueue<>();
@@ -232,14 +236,14 @@ public class CNode {
 
             Thread th = Thread.currentThread();
 
-            //####################### BADASS MODE ON
+            //####################### BADASS MODE ON :-
             int p = th.getPriority();
             try {
                 th.setPriority(Thread.MAX_PRIORITY);
             }catch ( SecurityException e){
                 Logger.log(e.getMessage());
             }
-            //####################### BADASS MODE ON
+            //####################### BADASS MODE ON :-
 
             Set<Map.Entry<Long,Object[]>> dcache = deltaset.entrySet();
             this.lbq.clear();
@@ -317,8 +321,12 @@ public class CNode {
                 try {
                     Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
                     sc.setTcpNoDelay(true);
+                    boolean go = true;
                     this.out = new PrintWriter(
                             sc.getOutputStream()
+                    );
+                    this.in = new Scanner(
+                            sc.getInputStream()
                     );
 
                     if(downed) {
@@ -327,8 +335,9 @@ public class CNode {
                     }
 
                     String message;
+                    int mcounter = 0;
 
-                    while (true) {
+                    while (go) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
                         if (message != null) {
@@ -337,6 +346,25 @@ public class CNode {
                         } else {
                             CNode.performBriefing();
                             Logger.log(sc.isConnected()+ ":STATE");
+
+                            //this.in.
+                            if( this.in.hasNext() ) {
+                                mcounter = 0;
+                                String[] args = this.in.
+                                        nextLine().split(":");
+
+                                switch (args[0]) {
+                                    case "confirmation":
+                                        break;
+                                }
+                            }else{
+                                mcounter++;
+                            }
+
+                            if( mcounter > 5*3 ){
+                                go = false;
+                                downed = true;
+                            }
                         }
                     }
                     //Logger.log("Tunnel open");

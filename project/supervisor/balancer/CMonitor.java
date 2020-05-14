@@ -18,6 +18,7 @@ import supervisor.util.Logger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -298,6 +299,7 @@ public class CMonitor {
         private String privateip;
         private String publicip;
         private BufferedReader in;
+        private PrintWriter out;
         private Socket sc;
 
         private AtomicLong load = new AtomicLong(0L);
@@ -408,6 +410,8 @@ public class CMonitor {
                     long tmp = Long.parseLong(
                             args[1]);
                     this.discountLoad(tmp);
+                    this.out.println("confirmation:");
+                    this.out.flush();
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
                     break;
                 case "fault-key":
@@ -433,6 +437,10 @@ public class CMonitor {
                 this.in = new BufferedReader(
                         new InputStreamReader(
                                 sc.getInputStream()));
+
+                this.out = new PrintWriter(
+                        sc.getOutputStream()
+                );
 
                 Logger.log("Tunnel open");
 
