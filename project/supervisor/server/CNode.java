@@ -316,15 +316,17 @@ public class CNode {
 
         public void run() {
             boolean downed = false;
-            try {
-                ServerSocket ssc = new ServerSocket(
-                        CloudStandart.inbound_channel_port
-                );
-
 
             while(true) {
                 try {
+                    ServerSocket ssc = (new ServerSocket(
+                            CloudStandart.inbound_channel_port
+                    ));
+
                     Socket sc = ssc.accept();
+
+                    ssc.close();
+
                     Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
                     boolean go = true;
@@ -392,9 +394,6 @@ public class CNode {
                 }
             }
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 }
