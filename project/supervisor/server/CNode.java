@@ -180,7 +180,7 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private PrintWriter out=null;
-        private Scanner in;
+        private BufferedReader in;
 
         private final BlockingQueue<String> lbq
                 = new LinkedBlockingQueue<>();
@@ -322,11 +322,15 @@ public class CNode {
                     Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
                     sc.setTcpNoDelay(true);
                     boolean go = true;
+
                     this.out = new PrintWriter(
                             sc.getOutputStream()
                     );
-                    this.in = new Scanner(
-                            sc.getInputStream()
+
+                    this.in = new BufferedReader(
+                           new InputStreamReader(
+                                   sc.getInputStream()
+                           )
                     );
 
                     if(downed) {
@@ -346,10 +350,10 @@ public class CNode {
                         } else {
                             CNode.performBriefing();
 
-                            if( this.in.hasNext() ) {
+                            if( this.in.ready() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
-                                        nextLine().split(":");
+                                        readLine().split(":");
 
                                 switch (args[0]) {
                                     case "confirmation":
