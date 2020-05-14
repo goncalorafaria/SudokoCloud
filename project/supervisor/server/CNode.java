@@ -364,6 +364,7 @@ public class CNode {
                             if( mcounter > 5*3 ){
                                 go = false;
                                 downed = true;
+                                Logger.log("Load Balancer most likely went down.");
                             }
                         }
                     }
