@@ -355,7 +355,7 @@ public class CNode {
                             this.out.flush();
                         } else {
                             CNode.performBriefing();
-
+                            Logger.log("sch briefing");
                             if( this.in.ready() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
@@ -382,7 +382,7 @@ public class CNode {
 
                 } catch (IOException e) {
                     Logger.log(e.toString());
-                    Logger.log("Load Balancer most likely went down.");
+                    Logger.log("Load Balancer most likely went down. Exception");
                     downed=true;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
