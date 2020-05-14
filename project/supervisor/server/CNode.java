@@ -325,6 +325,7 @@ public class CNode {
             while(true) {
                 try {
                     Socket sc = ssc.accept();
+                    Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
                     boolean go = true;
 
