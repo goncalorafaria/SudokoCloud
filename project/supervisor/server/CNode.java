@@ -362,6 +362,7 @@ public class CNode {
 
                                 switch (args[0]) {
                                     case "confirmation":
+                                        Logger.log("confirmation");
                                         break;
                                 }
                             }else{
