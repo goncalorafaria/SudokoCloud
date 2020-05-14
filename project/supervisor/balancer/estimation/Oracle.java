@@ -2,9 +2,12 @@ package supervisor.balancer.estimation;
 
 import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
+import supervisor.util.Logger;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Oracle {
@@ -16,8 +19,9 @@ public class Oracle {
 
     private final AtomicInteger nelements = new AtomicInteger(0);
 
-    private final TreeSet<Group> treesize =
-            new TreeSet<>();
+
+    private final ConcurrentSkipListSet<Group> treesize =
+            new ConcurrentSkipListSet<>();
 
     private final int extra;
 
@@ -45,21 +49,34 @@ public class Oracle {
         if (!mg.containsKey(board)) {
             g = new Group();
             mg.put(board, g);
+
+            synchronized (this.treesize) {
+                this.treesize.add(g);
+            }
+
         } else {
             g = mg.get(board);
         }
 
         if (g.shouldUpdate(un)) {
             Map<String, String> value = remote.get(key);
-            int inc = g.put(un, value);
-            int cur = nelements.addAndGet(inc);
-            if( inc == 1 ){
-                synchronized (this.treesize){
-                    this.treesize.remove(g);
-                    this.treesize.add(g);
-                    if( cur > extra )
-                        trim();
+            Logger.log("go fetch");
+            if(value != null) {
+                int inc = g.put(un, value);
+                int cur = nelements.addAndGet(inc);
+                if (inc == 1) {
+                    Logger.log(" synchronizing treesize ");
+                    synchronized (this.treesize) {
+                        this.treesize.remove(g);
+                        g.blockKey();
+                        this.treesize.add(g);
+                        if (cur > extra)
+                            trim();
+                    }
+
                 }
+            }else{
+                g.revertUpdate();
             }
         }
 
@@ -80,18 +97,23 @@ public class Oracle {
             est = Estimator.estimate(solver,board,un,g);
         }else{
             // tenho.
-            est = c.mean() + c.var();
+            est = Estimator.transform(c.mean() + c.var(),solver);
         }
 
         return est;
     }
 
     private void trim(){
+
         Group g = this.treesize.first();
+        this.treesize.remove(g);
+
+        Logger.log("trim everything:" + g.toString());
+
         if ( g.trim() ){
             nelements.decrementAndGet();
         }
-        this.treesize.remove(g);
+        g.blockKey();
         this.treesize.add(g);
     }
 

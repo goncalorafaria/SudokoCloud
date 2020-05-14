@@ -101,7 +101,7 @@ public class CMonitor {
 
         TaskStorage.init(false);
 
-        CMonitor.requestTable = new Oracle(10);
+        CMonitor.requestTable = new Oracle(2);
 
         CMonitor.serverRecovery();
     }
@@ -115,7 +115,7 @@ public class CMonitor {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
         boolean go = true;
-
+        /*
         while(go) {
             double exp = 0;
             go = false;
@@ -124,6 +124,7 @@ public class CMonitor {
                 exp += e.getLoad();
             }
             exp = exp / sep.size();
+
 
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
                 go = true;
@@ -138,6 +139,7 @@ public class CMonitor {
             }
              
         }
+        */
     }
 
     /**

@@ -1,5 +1,7 @@
 package supervisor.balancer.estimation;
 
+import supervisor.util.Logger;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BinaryStochasticBanditProblem {
@@ -29,6 +31,10 @@ public class BinaryStochasticBanditProblem {
         totalc.addAndGet((int)n - old);
     }
 
+    void revertUpdate(){
+        totalc.decrementAndGet();
+        updatec.decrementAndGet();
+    }
     public int getHit(){
         return hitc.get();
     }

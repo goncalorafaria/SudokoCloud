@@ -1,6 +1,8 @@
 package supervisor.balancer.estimation;
 
+import sun.rmi.runtime.Log;
 import supervisor.server.Count;
+import supervisor.util.Logger;
 
 import java.io.IOException;
 import java.util.*;
@@ -17,17 +19,22 @@ public class Group implements Comparable<Group>{
     final Lock rl = rwl.readLock();
     private final Lock wl = rwl.writeLock();
     ConcurrentHashMap<String,Element> table = new ConcurrentHashMap<>();
-    ConcurrentSkipListSet<Element> rcvl = new ConcurrentSkipListSet<>();
+
+    final AtomicInteger key = new AtomicInteger(0);
+    final AtomicInteger skey = new AtomicInteger(0);
 
     private final BinaryStochasticBanditProblem bscp =
-            new BinaryStochasticBanditProblem(0.05);
+            new BinaryStochasticBanditProblem(0.1);
 
     static class Element implements Comparable<Element> {
         private final BinaryStochasticBanditProblem ucb =
                 new BinaryStochasticBanditProblem(0.1);
         private Count c;
 
-        Element(Map<String, String> value) {
+        final String un;
+
+        Element(Map<String, String> value, String un) {
+            this.un = un;
             try {
                 this.c = Count.fromString(value.get("Count"));
                 ucb.setUpdate(c.n);
@@ -40,6 +47,14 @@ public class Group implements Comparable<Group>{
 
         Count getCount(){
             return new Count(c);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Element)) return false;
+            Element element = (Element) o;
+            return Objects.equals(un, element.un);
         }
 
         boolean shouldUpdate(){
@@ -64,20 +79,16 @@ public class Group implements Comparable<Group>{
             int th = this.ucb.getHit();
             int oh = o.ucb.getHit();
 
+            if( th == oh ){
+                th = (int)this.c.n;
+                oh = (int)o.c.n;
+            }
+
             return Integer.compare(th, oh);
         }
     }
 
     public Group(){
-    }
-
-    public int getHit(){
-        try {
-            rl.lock();
-            return bscp.getHit();
-        }finally {
-            rl.unlock();
-        }
     }
 
     public boolean contains(String key){
@@ -95,14 +106,13 @@ public class Group implements Comparable<Group>{
             Element e;
             if( table.containsKey(key) ){
                 e = table.get(key);
-                rcvl.remove(e);
                 e.update(value);
-                rcvl.add(e);
                 return 0;
             }else {
-                e = new Element(value);
-                rcvl.add(e);
+                e = new Element(value,key);
+
                 table.put(key, e);
+
                 if( table.size() > 2)
                     return 1;
                 else
@@ -114,15 +124,26 @@ public class Group implements Comparable<Group>{
         }
     }
 
-    float getScore(int m, int hm){
+    void revertUpdate(){
         try {
             rl.lock();
-            float pm  = this.rcvl.size()/(float)m;
-            float phm = this.bscp.getHit()/(float)hm;
-            return hm-pm;
+            this.bscp.revertUpdate();
         }finally {
             rl.unlock();
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Group)) return false;
+        Group group = (Group) o;
+        return Objects.equals(rwl, group.rwl);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rwl);
     }
 
     public Count get(String un){
@@ -136,6 +157,16 @@ public class Group implements Comparable<Group>{
             }
         }finally {
             rl.unlock();
+        }
+    }
+
+    public void blockKey(){
+        try {
+            this.wl.lock();
+            this.key.set( this.size() );
+            this.skey.set( bscp.getHit() );
+        }finally {
+            this.wl.unlock();
         }
     }
 
@@ -242,6 +273,8 @@ public class Group implements Comparable<Group>{
                 safter = String.valueOf(after);
             }
 
+            Logger.log("Interpolating: " + sbefore + " " + safter);
+
             l.get(0)[0] = sbefore;
             l.get(0)[1] = this.get(sbefore);
             l.get(1)[0] = safter;
@@ -256,20 +289,23 @@ public class Group implements Comparable<Group>{
     @Override
     public int compareTo(Group o) {
         List<Lock> ll = new LinkedList<>();
-        ll.add(rl);
-        ll.add(o.rl);
-        Arrays.sort(ll.toArray());
+
+        if( 0 < rl.toString().compareTo(o.rl.toString()) ){
+            ll.add(rl);
+        }else{
+            ll.add(o.rl);
+        }
 
         try {
             for( Lock l : ll)
                 l.lock();
 
-        int th = this.size();
-        int oh = o.size();
+        int th = this.key.get();
+        int oh = o.key.get();
 
         if( th == oh ){
-            th = this.getHit();
-            oh = o.getHit();
+            th = this.skey.get();
+            oh = o.skey.get();
 
             return Integer.compare(th,oh);
         }
@@ -285,9 +321,10 @@ public class Group implements Comparable<Group>{
     public boolean trim(){
         try {
             wl.lock();
-            if( rcvl.size() > 2){
-                Element e = rcvl.first();
-                rcvl.remove(e);
+            if( this.size() > 2){
+                Element e = Collections.min(this.table.values());
+                this.table.remove(e.un);
+                Logger.log("---  trim: " + e.un);
                 return true;
             }else{
                 return false;
@@ -295,6 +332,13 @@ public class Group implements Comparable<Group>{
         }finally {
             wl.unlock();
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+                "table=" + table.keySet() +
+                '}';
     }
 }
 

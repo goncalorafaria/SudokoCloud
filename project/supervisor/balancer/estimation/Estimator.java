@@ -1,7 +1,7 @@
 package supervisor.balancer.estimation;
 
-import java.util.List;
 import supervisor.server.Count;
+import java.util.List;
 
 public class Estimator {
 
@@ -88,25 +88,30 @@ public class Estimator {
         if (g.size() > 0 ) {
             double est = estimateBranchesTaken(un, g);
 
-            switch (solver) {
-                case "BFS":
-                    est = est * 12.88852179 + 14068.78484095;
-                    break;
-                case "CP":
-                    est = est * 14.16131419 + 19312.86569091;
-                    break;
-                case "DLX":
-                    // est * 0.005052572765698524 + fixed*109378.21280323979
-                    // (dlx branch) -> time
-                    // (time) -> bfs branch
-                    // bfs branch -> inst
-                    est = ((est * 0.00430531 + 75100.9879752195) * 0.09105526 + 556.56763109) * 12.88852179 + 14068.78484095;
-                    break;
-            }
-            return est;
+            return transform(est,solver);
         }else{
             return defaultEstimate(solver,board,un);
         }
+
+    }
+
+    public static double transform(double est, String solver){
+        switch (solver) {
+            case "BFS":
+                est = est * 12.88852179 + 14068.78484095;
+                break;
+            case "CP":
+                est = est * 14.16131419 + 19312.86569091;
+                break;
+            case "DLX":
+                // est * 0.005052572765698524 + fixed*109378.21280323979
+                // (dlx branch) -> time
+                // (time) -> bfs branch
+                // bfs branch -> inst
+                est = ((est * 0.00430531 + 75100.9879752195) * 0.09105526 + 556.56763109) * 12.88852179 + 14068.78484095;
+                break;
+        }
+        return est;
 
     }
 }
