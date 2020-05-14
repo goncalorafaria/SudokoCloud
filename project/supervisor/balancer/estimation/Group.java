@@ -45,6 +45,11 @@ public class Group implements Comparable<Group>{
             }
         }
 
+        Element(Count c, String un) {
+            this.un = un;
+            this.c = new Count(c);
+        }
+
         Count getCount(){
             return new Count(c);
         }
@@ -62,11 +67,17 @@ public class Group implements Comparable<Group>{
         }
 
         // TODO: ALTER UCB -  acording to N.
-        void update(Map<String, String> value){
+        void updateDirect(Count candidate){
+            if( candidate.n > c.n ){
+                ucb.setUpdate(candidate.n);
+                this.c = candidate;
+            }
+        }
 
+        void update(Map<String,String> value){
             try {
-                this.c = Count.fromString(value.get("Count"));
-                ucb.setUpdate(c.n);
+                Count candidate = Count.fromString(value.get("Count"));
+                updateDirect(candidate);
             } catch (IOException e) {
                 e.printStackTrace();
             }catch (ClassNotFoundException e){
@@ -100,18 +111,42 @@ public class Group implements Comparable<Group>{
         }
     }
 
-    public int put(String key, Map<String,String> value ){
+    public int response(String un, Count c){
+        try {
+            wl.lock();
+
+            Element e;
+            if( table.containsKey(un) ){
+                e = table.get(un);
+                e.updateDirect(c);
+                return 0;
+            }else {
+                e = new Element(c,un);
+                table.put(un, e);
+
+                if( table.size() > 2)
+                    return 1;
+                else
+                    return 0;
+            }
+
+
+        }finally {
+            wl.unlock();
+        }
+    }
+    public int put(String un, Map<String,String> value ){
         try {
             wl.lock();
             Element e;
-            if( table.containsKey(key) ){
-                e = table.get(key);
+            if( table.containsKey(un) ){
+                e = table.get(un);
                 e.update(value);
                 return 0;
             }else {
-                e = new Element(value,key);
+                e = new Element(value,un);
 
-                table.put(key, e);
+                table.put(un, e);
 
                 if( table.size() > 2)
                     return 1;

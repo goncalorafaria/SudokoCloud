@@ -160,10 +160,17 @@ public class CNode {
                                 cold.aggregate(c);
                                 c = cold;
                             }
+                            String bin = c.toBinary();
+
+                            if( mname.equals("Count") )
+                                CNode.tunnel.stream(tsk, bin);
+
                             row.put(mname, c.toBinary());
                         }
+
                     }
                     requestTable.put(tsk, row);
+                    // - c
 
 
                 } catch (InterruptedException e) {
@@ -232,6 +239,9 @@ public class CNode {
             return est;
         }
 
+        public void stream(String tsk, String c){
+            lbq.add("data:"+tsk+":"+c);
+        }
         private void recovery(){
 
             Thread th = Thread.currentThread();

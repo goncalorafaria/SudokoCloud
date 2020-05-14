@@ -11,6 +11,7 @@ import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
 import supervisor.balancer.estimation.Oracle;
+import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
@@ -181,6 +182,9 @@ public class CMonitor {
         return newInstanceId;
     }
 
+    private static void jobresponse(String key, Count c){
+        CMonitor.requestTable.response(key,c);
+    }
     static void serverRecovery(){
 
         for( String newInstanceId : getActiveInstances().keySet())
@@ -396,10 +400,18 @@ public class CMonitor {
             CMonitor.recall(this.vm);
         }
 
-        private void fetching() throws IOException {
+        private void fetching() throws IOException{
             String[] args = in.readLine().split(":");
 
             switch (args[0]){
+                case "data" :
+                    String key = args[1];
+                    try {
+                        Count c = Count.fromString(args[2]);
+                        CMonitor.jobresponse(key,c);
+                    }catch (ClassNotFoundException e){
+                    }
+                    break;
                 case "queue" :
                     this.qsize.getAndAdd(
                             Integer.parseInt(
