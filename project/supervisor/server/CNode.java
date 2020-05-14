@@ -336,6 +336,7 @@ public class CNode {
                             this.out.flush();
                         } else {
                             CNode.performBriefing();
+                            Logger.log(sc.isConnected()+ ":STATE");
                         }
                     }
                     //Logger.log("Tunnel open");
