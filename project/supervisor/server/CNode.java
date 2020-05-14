@@ -316,10 +316,15 @@ public class CNode {
 
         public void run() {
             boolean downed = false;
+            try {
+                ServerSocket ssc = new ServerSocket(
+                        CloudStandart.inbound_channel_port
+                );
+
 
             while(true) {
                 try {
-                    Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
+                    Socket sc = ssc.accept();
                     sc.setTcpNoDelay(true);
                     boolean go = true;
 
@@ -366,6 +371,7 @@ public class CNode {
                             if( mcounter > 5*3 ){
                                 go = false;
                                 downed = true;
+                                sc.close();
                                 Logger.log("Load Balancer most likely went down.");
                             }
                         }
@@ -379,6 +385,10 @@ public class CNode {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+            }
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
