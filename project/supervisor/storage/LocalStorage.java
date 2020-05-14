@@ -9,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import supervisor.storage.Storage;
 
 public class LocalStorage<V> implements Storage<V> {
     /**

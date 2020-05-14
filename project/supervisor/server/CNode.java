@@ -1,18 +1,19 @@
 package supervisor.server;
 
-import supervisor.balancer.CMonitor;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,7 +53,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(false,true);
+        Logger.publish(true,false);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -151,8 +152,7 @@ public class CNode {
 
                     for (String mname : itask.metricsK()) {
 
-                        Metric m = itask.getMetric(mname);
-                        Count c = (Count) m;
+                        Count c = itask.getMetric(mname);
 
                         if (c.valid()) {
                             if (row.containsKey(mname)) {
@@ -180,6 +180,7 @@ public class CNode {
 
     static class EndPoint extends Thread {
         private PrintWriter out=null;
+        private BufferedReader in;
 
         private final BlockingQueue<String> lbq
                 = new LinkedBlockingQueue<>();
@@ -235,14 +236,14 @@ public class CNode {
 
             Thread th = Thread.currentThread();
 
-            //####################### BADASS MODE ON
+            //####################### BADASS MODE ON :-
             int p = th.getPriority();
             try {
                 th.setPriority(Thread.MAX_PRIORITY);
             }catch ( SecurityException e){
                 Logger.log(e.getMessage());
             }
-            //####################### BADASS MODE ON
+            //####################### BADASS MODE ON :-
 
             Set<Map.Entry<Long,Object[]>> dcache = deltaset.entrySet();
             this.lbq.clear();
@@ -318,11 +319,29 @@ public class CNode {
 
             while(true) {
                 try {
-                    Socket sc = (new ServerSocket(CloudStandart.inbound_channel_port)).accept();
+                    ServerSocket ssc = (new ServerSocket(
+                            CloudStandart.inbound_channel_port
+                    ));
+
+                    Socket sc = ssc.accept();
+
+                    ssc.close();
+
+                    Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
+                    boolean go = true;
+
                     this.out = new PrintWriter(
                             sc.getOutputStream()
                     );
+
+                    this.in = new BufferedReader(
+                           new InputStreamReader(
+                                   sc.getInputStream()
+                           )
+                    );
+
+                    this.out.println("begin:");
 
                     if(downed) {
                         this.recovery();
@@ -330,27 +349,51 @@ public class CNode {
                     }
 
                     String message;
+                    int mcounter = 0;
 
-                    while (true) {
+                    while (go) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
                         if (message != null) {
                             this.out.println(message);
                             this.out.flush();
                         } else {
+                            Logger.log("+ sch briefing.");
                             CNode.performBriefing();
+                            Logger.log("- sch briefing.");
+                            if( this.in.ready() ) {
+                                mcounter = 0;
+                                String[] args = this.in.
+                                        readLine().split(":");
+
+                                switch (args[0]) {
+                                    case "confirmation":
+                                        Logger.log("confirmation");
+                                        break;
+                                }
+                            }else{
+                                mcounter++;
+                            }
+
+                            if( mcounter > 1*3 ){
+                                go = false;
+                                downed = true;
+                                sc.close();
+                                Logger.log("Load Balancer most likely went down.");
+                            }
                         }
                     }
                     //Logger.log("Tunnel open");
 
                 } catch (IOException e) {
                     Logger.log(e.toString());
-                    Logger.log("Load Balancer most likely went down.");
+                    Logger.log("Load Balancer most likely went down. Exception");
                     downed=true;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
+
         }
     }
 }

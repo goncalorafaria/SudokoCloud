@@ -10,7 +10,8 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
-import supervisor.storage.CachedRemoteStorage;
+import supervisor.balancer.estimation.Oracle;
+import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
@@ -54,7 +55,7 @@ public class CMonitor {
     private static final Map<String, CMonitor.Endpoint> vmstates = new ConcurrentSkipListMap<>();
 
     /* Storage persistente que guarda o historico das metricas para cada pedido. */
-    private static CachedRemoteStorage requestTable;
+    private static Oracle requestTable;
 
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
     private final static Set<String> activevms = new ConcurrentSkipListSet<>();
@@ -99,11 +100,9 @@ public class CMonitor {
                     e);
         }
 
-        CachedRemoteStorage.init(false);
+        TaskStorage.init(false);
 
-        CMonitor.requestTable = new CachedRemoteStorage(
-                CloudStandart.taskStorage_tablename,
-                CloudStandart.taskStorage_tablekey);
+        CMonitor.requestTable = new Oracle(200);
 
         CMonitor.serverRecovery();
     }
@@ -117,7 +116,7 @@ public class CMonitor {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
         boolean go = true;
-
+        /*
         while(go) {
             double exp = 0;
             go = false;
@@ -126,6 +125,7 @@ public class CMonitor {
                 exp += e.getLoad();
             }
             exp = exp / sep.size();
+
 
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
                 go = true;
@@ -140,6 +140,7 @@ public class CMonitor {
             }
              
         }
+        */
     }
 
     /**
@@ -181,6 +182,7 @@ public class CMonitor {
     }
 
     static void serverRecovery(){
+
         for( String newInstanceId : getActiveInstances().keySet())
             CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
     }
@@ -215,11 +217,12 @@ public class CMonitor {
     static String decide(String s) throws InterruptedException {
         Set<String> tmp = new HashSet<>(CMonitor.activevms);
 
-        double iestimate = CMonitor.requestTable.estimate(s);
+        double iestimate = CMonitor.requestTable.predict(s);
         boolean go = true;
 
         Logger.log("branch count estimate: " +
-                iestimate);
+                iestimate
+        );
 
         Logger.log(CMonitor.activevms.toString());
         Logger.log(CMonitor.vmstates.toString());
@@ -296,6 +299,7 @@ public class CMonitor {
         private String privateip;
         private String publicip;
         private BufferedReader in;
+        private PrintWriter out;
         private Socket sc;
 
         private AtomicLong load = new AtomicLong(0L);
@@ -378,7 +382,6 @@ public class CMonitor {
                     //Logger.log(e.toString());
                 }
             }
-
             this.recalling();
         }
 
@@ -407,10 +410,12 @@ public class CMonitor {
                     long tmp = Long.parseLong(
                             args[1]);
                     this.discountLoad(tmp);
+                    this.out.println("confirmation:");
+                    this.out.flush();
                     Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
                     break;
                 case "fault-key":
-                    double est = CMonitor.requestTable.estimate(args[1]);
+                    double est = CMonitor.requestTable.predict(args[1]);
                     this.scheduleLoad(est);
                     Logger.log("fault-key" + ":" + args[1] + ":" + est);
                     break;
@@ -432,6 +437,12 @@ public class CMonitor {
                 this.in = new BufferedReader(
                         new InputStreamReader(
                                 sc.getInputStream()));
+
+                this.out = new PrintWriter(
+                        sc.getOutputStream()
+                );
+
+                this.in.readLine();
 
                 Logger.log("Tunnel open");
 

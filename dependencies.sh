@@ -1,3 +1,4 @@
+
 ## compiler options
 export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
 
@@ -16,5 +17,5 @@ export CLASSPATH="$CLASSPATH:$PWD/project/"
 export CLASSPATH="$CLASSPATH:$PWD/project/BIT/"
 
 # AWS API
-export CLASSPATH="$CLASSPATH:$AWS_DIR/lib/aws-java-sdk-1.11.751.jar"
+export CLASSPATH="$CLASSPATH:$AWS_DIR/lib/aws-java-sdk-$AWS_VER.jar"
 export CLASSPATH="$CLASSPATH:$AWS_DIR/third-party/lib/*"
