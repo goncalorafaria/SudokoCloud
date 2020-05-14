@@ -355,8 +355,9 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
+                            Logger.log("+ sch briefing");
                             CNode.performBriefing();
-                            Logger.log("sch briefing");
+                            Logger.log("- sch briefing");
                             if( this.in.ready() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
