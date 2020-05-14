@@ -327,7 +327,7 @@ public class CNode {
                     Socket sc = ssc.accept();
                     Logger.log("Initiating tunnel");
                     sc.setTcpNoDelay(true);
-                    this.out.println("begin:");
+                    //this.out.println("begin:");
                     boolean go = true;
 
                     this.out = new PrintWriter(
@@ -355,9 +355,9 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
-                            Logger.log("+ sch briefing");
+                            Logger.log("+ sch briefing.");
                             CNode.performBriefing();
-                            Logger.log("- sch briefing");
+                            Logger.log("- sch briefing.");
                             if( this.in.ready() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
