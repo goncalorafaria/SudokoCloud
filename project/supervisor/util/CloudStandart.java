@@ -72,12 +72,12 @@ public class CloudStandart {
             pars.put(ss[0], ss[1]);
         }
 
-        return pars.get("s") + ":" + pars.get("un") + ":" + pars.get("n1") + ":" + pars.get("n2");
+        return pars.get("s") + ":" + pars.get("un") + ":" + pars.get("n1") + "x" + pars.get("n2");
     }
 
     public static String makeKey(String[] args) {
 
-        return args[1] + ":" + args[3] + ":" + args[5] + ":" + args[7];
+        return args[1] + ":" + args[3] + ":" + args[5];
     }
 
 }

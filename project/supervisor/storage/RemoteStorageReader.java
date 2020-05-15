@@ -89,12 +89,6 @@ public class RemoteStorageReader {
         }
         System.out.print("}");
 
-        System.out.println("");
-
-        //System.out.println(overhead);
-
-        //System.out.println(a.describe());
-
 
     }
 }

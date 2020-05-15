@@ -45,7 +45,7 @@ public class Oracle {
     public void response(String key, Count c){
         String[] sv = key.split(":");
         String solver = sv[0];
-        String board = sv[2] + ":" + sv[3];
+        String board = sv[2];
         String un = sv[1];
 
         Map<String, Group> mg = cachestructure.get(solver);
@@ -96,7 +96,7 @@ public class Oracle {
     public double predict(String key){
         String[] sv = key.split(":");
         String solver = sv[0];
-        String board = sv[2] + ":" + sv[3];
+        String board = sv[2];
         String un = sv[1];
         double est;
         Group g = this.replenish(key,solver,board,un);

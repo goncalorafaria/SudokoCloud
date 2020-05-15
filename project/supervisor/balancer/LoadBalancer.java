@@ -97,7 +97,9 @@ public class LoadBalancer {
                     CMonitor.autoscale(LoadBalancer.inqueue.size());
 
                     if (r != null) {
-                        String redirectPath = CMonitor.decide(CloudStandart.makeKey(r.query));
+                        String redirectPath = CMonitor.decide(
+                                CloudStandart.makeKey(r.query),
+                                r);
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
