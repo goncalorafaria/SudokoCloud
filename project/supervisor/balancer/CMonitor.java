@@ -402,10 +402,10 @@ public class CMonitor {
 
         private void fetching() throws IOException{
             String[] args = in.readLine().split(":");
-
             switch (args[0]){
                 case "data" :
                     String key = args[1];
+                    Logger.log("#############" + key + ":"+ args[2]);
                     try {
                         Count c = Count.fromString(args[2]);
                         CMonitor.jobresponse(key,c);
@@ -454,7 +454,12 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
-                this.in.readLine();
+                String v = this.in.readLine();
+
+                while(!v.equals("begin:")) {
+                    Logger.log(v);
+                    v = this.in.readLine();
+                }
 
                 Logger.log("Tunnel open");
 
