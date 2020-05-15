@@ -1,6 +1,5 @@
 package supervisor.balancer.estimation;
 
-import sun.rmi.runtime.Log;
 import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
@@ -58,7 +57,7 @@ public class Oracle {
             increment(g,cur);
         }
 
-        Logger.log(g.toString());
+        Logger.log("response ------------:"+key);
     }
 
     private Group replenish(String key, String solver,String board,String un) {
