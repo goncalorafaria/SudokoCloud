@@ -46,8 +46,8 @@ public class CMonitor {
 
     private static final long idealThreashold = 200000;
     private static final long ceilingThreashold = (int)(idealThreashold * 2);
-    private static final long scaleUpThreashold = (int)(idealThreashold * 1.5);
-    private static final long scaleDownThreashold = (int)(idealThreashold * 0.5);
+    private static final long scaleUpThreashold = (int)(idealThreashold * 0.9);
+    private static final long scaleDownThreashold = (int)(idealThreashold * 0.25);
 
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms = new AtomicInteger(0);
@@ -117,7 +117,7 @@ public class CMonitor {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
         boolean go = true;
-        /*
+
         while(go) {
             double exp = 0;
             go = false;
@@ -125,7 +125,11 @@ public class CMonitor {
             for (Endpoint e : sep) {
                 exp += e.getLoad();
             }
-            exp = exp / sep.size();
+
+            if( sep.size() > 0 )
+                exp = exp / sep.size();
+
+            Logger.log("<<<<<<<<<<< : avg vm load " + exp + "num: " + sep.size() );
 
 
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
@@ -139,9 +143,7 @@ public class CMonitor {
                 Logger.log("summon:");
                 CMonitor.summon();
             }
-             
         }
-        */
     }
 
     /**
@@ -396,8 +398,8 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    Logger.log(this.rcache.toString());
-                    if(offc > 3*5){
+                    Logger.log("timeout:" + this.rcache.toString());
+                    if(offc > 3*2){
                         try { this.sc.close();
                         }catch(IOException exp){}
                         this.faultdetected();
