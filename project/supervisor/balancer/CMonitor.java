@@ -364,7 +364,6 @@ public class CMonitor {
             }
 
             Logger.log("Calling: " + vm);
-
             bcalling = true;
             while (bcalling && active.get()) {
                 try {
@@ -404,10 +403,9 @@ public class CMonitor {
             String[] args = in.readLine().split(":");
             switch (args[0]){
                 case "data" :
-                    String key = args[1];
-                    Logger.log("#############" + key + ":"+ args[2]);
+                    String key = args[1]+":"+args[2]+":"+args[3]+":"+args[4];
                     try {
-                        Count c = Count.fromString(args[2]);
+                        Count c = Count.fromString(args[5]);
                         CMonitor.jobresponse(key,c);
                     }catch (ClassNotFoundException e){
                     }
@@ -431,7 +429,7 @@ public class CMonitor {
                     this.scheduleLoad(est);
                     Logger.log("fault-key" + ":" + args[1] + ":" + est);
                     break;
-                default: Logger.log(args[0]);
+                default: Logger.log("swithc default:" + args[0]);
             }
 
         }
@@ -444,7 +442,7 @@ public class CMonitor {
 
                 c = false;
 
-                this.sc.setSoTimeout(20 * 1000);
+
 
                 this.in = new BufferedReader(
                         new InputStreamReader(
@@ -454,19 +452,16 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
-                String v = this.in.readLine();
+                this.in.readLine();
 
-                while(!v.equals("begin:")) {
-                    Logger.log(v);
-                    v = this.in.readLine();
-                }
+                this.sc.setSoTimeout(20 * 1000);
 
                 Logger.log("Tunnel open");
 
             } catch (UnknownHostException e) {
-                //Logger.log(e.toString());
+                Logger.log(e.toString());
             } catch (IOException e) {
-                //Logger.log(e.toString());
+                Logger.log(e.toString());
             }
 
             return c;
