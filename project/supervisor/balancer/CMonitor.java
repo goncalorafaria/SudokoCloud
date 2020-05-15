@@ -182,9 +182,18 @@ public class CMonitor {
         return newInstanceId;
     }
 
+    private static void forcedrecall(String vmid, Collection<LoadBalancer.Request> requests){
+        CMonitor.vmstates.remove(vmid);
+        CMonitor.activevms.remove(vmid);
+
+        CMonitor.recall(vmid);
+        LoadBalancer.reschedule(requests);
+    }
+
     private static void jobresponse(String key, Count c){
         CMonitor.requestTable.response(key,c);
     }
+
     static void serverRecovery(){
 
         for( String newInstanceId : getActiveInstances().keySet())
@@ -298,8 +307,6 @@ public class CMonitor {
         private final String vm;
         private final AtomicBoolean active = new AtomicBoolean(true);
         private final AtomicInteger qsize = new AtomicInteger(0);
-        private String dns;
-        private String privateip;
         private String publicip;
         private BufferedReader in;
         private PrintWriter out;
@@ -364,7 +371,6 @@ public class CMonitor {
                     sleep(500);
                 } catch (InterruptedException e) {
                     //Logger.log(e.toString());
-                    Logger.log(this.rcache.toString());
                 }
             }
 
@@ -383,14 +389,28 @@ public class CMonitor {
             CMonitor.startingvms.addAndGet(-1);
 
             Logger.log("Fetching: " + vm);
+            int offc = 0;
             while (active.get() || this.qsize.get() > 0) {
                 try {
                     fetching();
+                    offc = 0;
                 } catch (IOException e) {
+                    offc++;
+                    Logger.log(this.rcache.toString());
+                    if(offc > 3*5){
+                        try { this.sc.close();
+                        }catch(IOException exp){}
+                        this.faultdetected();
+                        return;
+                    }
                     //Logger.log(e.toString());
                 }
             }
             this.recalling();
+        }
+
+        public void faultdetected(){
+            CMonitor.forcedrecall(this.vm, this.rcache.values());
         }
 
         private void recalling() {
@@ -409,11 +429,11 @@ public class CMonitor {
             switch (args[0]){
                 case "data" :
                     String key = args[1]+":"+args[2]+":"+args[3];
-                    Logger.log("data." + key);
                     try {
                         Count c = Count.fromString(args[4]);
                         CMonitor.jobresponse(key,c);
-                        this.rcache.remove(key);
+                        this.rcache.remove(key).tunel.close();
+                        Logger.log("endpoint ------------:"+this.rcache.toString());
                     }catch (ClassNotFoundException e){
                     }
                     break;
@@ -438,7 +458,6 @@ public class CMonitor {
                     break;
                 default: Logger.log("swithc default:" + args[0]);
             }
-
         }
 
         private boolean calling() {
@@ -479,8 +498,6 @@ public class CMonitor {
             if (ins.containsKey(this.vm)) {
                 Instance vmi = ins.get(vm);
 
-                this.dns = vmi.getPublicDnsName();
-                this.privateip = vmi.getPrivateIpAddress();
                 this.publicip = vmi.getPublicIpAddress();
 
                 return false;

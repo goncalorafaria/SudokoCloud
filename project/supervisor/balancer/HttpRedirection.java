@@ -30,7 +30,7 @@ public class HttpRedirection {
 
             ex.sendResponseHeaders(307, -1);
             // 303 does not work properly. ()
-            ex.close();
+            // ex.close();
 
         } catch (URISyntaxException e) {
             Logger.log(e.toString());

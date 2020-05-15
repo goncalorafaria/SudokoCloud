@@ -8,6 +8,7 @@ import supervisor.util.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +25,10 @@ public class LoadBalancer {
     private static final Balancer worker = new LoadBalancer.Balancer();
 
     public LoadBalancer() {
+    }
+
+    public static void reschedule(Collection<Request> vs){
+        inqueue.addAll(vs);
     }
 
     public static void main(String[] args) throws Exception {
@@ -50,7 +55,6 @@ public class LoadBalancer {
         } catch (Exception e) {
             Logger.log("Terminating VMS" + e.toString());
         }
-
     }
 
     static class Request {

@@ -385,7 +385,7 @@ public class CNode {
                                 mcounter++;
                             }
 
-                            if( mcounter > 1*3 ){
+                            if( mcounter > 5*3 ){
                                 go = false;
                                 downed = true;
                                 sc.close();
