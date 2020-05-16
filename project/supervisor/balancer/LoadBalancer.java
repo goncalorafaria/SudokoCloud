@@ -91,7 +91,6 @@ public class LoadBalancer {
                         new LoadBalancer.Request(query, t)
                 );
             }
-
         }
 
         static class RemoteServer implements HttpHandler {
@@ -125,8 +124,7 @@ public class LoadBalancer {
                     } catch (MalformedURLException | URISyntaxException e) {
                         return;
                     } catch (IOException e) {
-                        if( ep != null)
-                            ep.faultdetected();
+                        ep.faultdetected();
                         go = true;
                     }
                 }

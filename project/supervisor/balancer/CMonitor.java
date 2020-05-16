@@ -85,12 +85,14 @@ public class CMonitor {
                         "sudo echo " + bsc.getAWSAccessKeyId() + " > cred.txt\n" +
                         "sudo echo " + bsc.getAWSSecretKey() + " >> cred.txt\n" +
                         "sudo echo " + bsc.getSessionToken() + " >> cred.txt\n" +
+                        //"sudo ./redo.sh \n" +
                         "./server.sh \n";
             }else {
                 launchscript = "#!/bin/bash \n" +
                         "cd /home/ec2-user\n" +
                         "sudo echo " + credentials.getAWSAccessKeyId() + " > cred.txt\n" +
                         "sudo echo " + credentials.getAWSSecretKey() + " >> cred.txt\n" +
+                        //"sudo ./redo.sh \n" +
                         "./server.sh \n";
             }
         } catch (Exception e) {
@@ -118,7 +120,7 @@ public class CMonitor {
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
         boolean go = true;
 
-        /*
+
         while(go) {
             double exp = 0;
             go = false;
@@ -145,7 +147,6 @@ public class CMonitor {
             }
         }
 
-         */
     }
 
     /**

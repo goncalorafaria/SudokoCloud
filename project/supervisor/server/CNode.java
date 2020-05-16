@@ -53,7 +53,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(true,false);
+        Logger.publish(false,false);
     }
 
     /** Associa um novo pedido a um thread. */
