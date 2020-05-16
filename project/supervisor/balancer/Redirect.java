@@ -8,7 +8,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 
-public class HttpRedirection {
+public class Redirect {
     /**
      * Esta classe trata dos detalhos de mandar http redirect.
      */

@@ -118,10 +118,10 @@ public class LoadBalancer {
 
                         int port = 8000;
 
-                        String solution = HttpRedirection.
+                        String solution = Redirect.
                                 passRequestandWait(t, ep.getIp(), port, u);
 
-                        HttpRedirection.passResponse(solution, t);
+                        Redirect.passResponse(solution, t);
 
                     } catch (InterruptedException e) {
                     } catch (MalformedURLException | URISyntaxException e) {
@@ -158,7 +158,7 @@ public class LoadBalancer {
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
-                        HttpRedirection.send(r.tunel, location);
+                        Redirect.send(r.tunel, location);
                     }else{
                         Logger.log("Autoscalling round ");
                     }
