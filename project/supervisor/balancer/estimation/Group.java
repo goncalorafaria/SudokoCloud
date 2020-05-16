@@ -19,12 +19,12 @@ public class Group implements Comparable<Group>{
     final AtomicInteger key = new AtomicInteger(0);
     final AtomicInteger skey = new AtomicInteger(0);
 
-    private final BinaryStochasticBanditProblem bscp =
-            new BinaryStochasticBanditProblem(0.1);
+    private final UCB bscp =
+            new UCB(0.1);
 
     static class Element implements Comparable<Element> {
-        private final BinaryStochasticBanditProblem ucb =
-                new BinaryStochasticBanditProblem(0.1);
+        private final UCB ucb =
+                new UCB(0.1);
         private Count c;
 
         final String un;

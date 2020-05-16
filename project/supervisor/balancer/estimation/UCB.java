@@ -2,7 +2,7 @@ package supervisor.balancer.estimation;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class BinaryStochasticBanditProblem {
+public class UCB {
 
     private final AtomicInteger hitc=new AtomicInteger(1);
     private final AtomicInteger updatec=new AtomicInteger(1);
@@ -10,7 +10,7 @@ public class BinaryStochasticBanditProblem {
 
     private final double base;
 
-    public BinaryStochasticBanditProblem(double base){
+    public UCB(double base){
         this.base = base;
     }
 
