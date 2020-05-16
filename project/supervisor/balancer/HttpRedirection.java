@@ -1,6 +1,5 @@
 package supervisor.balancer;
 
-import com.amazonaws.services.xray.model.Http;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import supervisor.util.Logger;
