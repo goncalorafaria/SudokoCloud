@@ -20,10 +20,17 @@ public class Estimator {
             String un){
         double est = 50000;
 
-        switch (solver){
-            case "DLX": est = 80000; break;
-            case "CP" : est = 50000; break;
-            case "BFS": est = 50000; break;
+        switch (solver +  board.split("x")[0] ){
+            case "DLX9": est = 111283; break;
+            case "DLX16": est = 141388; break;
+            case "DLX25": est = 111283; break;
+            case "CP9" : est = 37552; break;
+            case "CP16" : est = 177409; break;
+            case "CP25" : est = 360501; break;
+            case "BFS9": est = 34110; break;
+            case "BFS16": est = 186182; break;
+            case "BFS25": est = 50000; break;
+            default: est=50000; break;
         }
 
         return est;

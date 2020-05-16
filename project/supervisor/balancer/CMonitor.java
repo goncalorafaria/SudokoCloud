@@ -46,7 +46,7 @@ public class CMonitor {
 
     private static final long idealThreashold = 200000;
     private static final long ceilingThreashold = (int)(idealThreashold * 2);
-    private static final long scaleUpThreashold = (int)(idealThreashold * 0.9);
+    private static final long scaleUpThreashold = (int)(idealThreashold * 0.75);
     private static final long scaleDownThreashold = (int)(idealThreashold * 0.25);
 
     /* number of virtual machines starting. */
@@ -211,6 +211,8 @@ public class CMonitor {
     static void schedulerecall(String vmid) {
         CMonitor.Endpoint e = CMonitor
                 .vmstates.remove(vmid);
+        CMonitor.activevms.remove(vmid);
+
         e.recall();
     }
 
@@ -367,7 +369,6 @@ public class CMonitor {
         }
 
         public void recall() {
-            CMonitor.activevms.remove(vm);
             this.active.getAndSet(false);
         }
 
