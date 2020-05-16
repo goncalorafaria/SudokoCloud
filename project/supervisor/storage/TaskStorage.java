@@ -1,15 +1,12 @@
 package supervisor.storage;
 
-
-import supervisor.util.CloudStandart;
-
 import java.util.*;
 
 public class TaskStorage extends RemoteStorage {
 
     public TaskStorage() {
-        super(CloudStandart.taskStorage_tablename,
-                CloudStandart.taskStorage_tablekey);//,"classe","un");
+        super("RequestTable",
+                "key");//,"classe","un");
     }
 
     @Override

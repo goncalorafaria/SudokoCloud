@@ -24,7 +24,6 @@ import supervisor.storage.Storage;
 public class RemoteStorage implements Storage<String> {
 
     public static AmazonDynamoDB dynamoDB;
-    public static Table rTable;
     protected final String table;
     private final String key;
 

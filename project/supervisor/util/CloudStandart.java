@@ -17,10 +17,6 @@ public class CloudStandart {
     public static String keyname = "CNV-lab-AWS";
     public static String securitygroups = "CNV-ssh+http";
 
-
-    public static String taskStorage_tablename = "RequestTable";
-    public static String taskStorage_tablekey = "key";
-
     public static void init(){
 
         try {
@@ -58,9 +54,6 @@ public class CloudStandart {
             System.out.println(e.toString());
         }
     }
-
-
-
 
     public static String makeKey(String s) {
 

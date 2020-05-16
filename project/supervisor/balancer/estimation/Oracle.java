@@ -1,6 +1,7 @@
 package supervisor.balancer.estimation;
 
 import supervisor.server.Count;
+import supervisor.storage.Storage;
 import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
 
@@ -15,7 +16,7 @@ public class Oracle {
     private final Map<String, Map<String, Group>> cachestructure =
             new ConcurrentHashMap<>();
 
-    private final TaskStorage remote = new TaskStorage();
+    private final Storage<String> remote = new TaskStorage();
 
     private final AtomicInteger nelements = new AtomicInteger(0);
 
