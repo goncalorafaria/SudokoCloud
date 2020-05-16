@@ -103,11 +103,13 @@ public class LoadBalancer {
 
                 LoadBalancer.Request r = new LoadBalancer.Request(query, t);
 
+                CMonitor.Endpoint ep = null;
+
                 boolean go =true;
                 while(go) {
                     go = false;
                     try {
-                        String serverIp = CMonitor.decide(
+                        ep = CMonitor.decide(
                                 CloudStandart.makeKey(r.query),
                                 r,
                                 true);
@@ -115,7 +117,7 @@ public class LoadBalancer {
                         int port = 8000;
 
                         String solution = HttpRedirection.
-                                passRequestandWait(t, serverIp, port, u);
+                                passRequestandWait(t, ep.getIp(), port, u);
 
                         HttpRedirection.passResponse(solution, t);
 
@@ -123,6 +125,8 @@ public class LoadBalancer {
                     } catch (MalformedURLException | URISyntaxException e) {
                         return;
                     } catch (IOException e) {
+                        if( ep != null)
+                            ep.faultdetected();
                         go = true;
                     }
                 }
@@ -151,7 +155,7 @@ public class LoadBalancer {
                         String redirectPath = CMonitor.decide(
                                 CloudStandart.makeKey(r.query),
                                 r,
-                                false);
+                                false).getIp();
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
