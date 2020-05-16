@@ -73,7 +73,6 @@ public class LocalStorage<V> implements Storage<V> {
         return (Set<String>) LocalStorage.database.get(this.tablename).keySet();
     }
 
-
     public Map<String,V> remove(String key){
         Map<String, Map<String,V>> table =
                 (Map<String, Map<String,V>>)database.get(this.tablename);

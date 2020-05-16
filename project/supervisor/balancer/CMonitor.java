@@ -46,8 +46,8 @@ public class CMonitor {
 
     private static final long idealThreashold = 200000;
     private static final long ceilingThreashold = (int)(idealThreashold * 2);
-    private static final long scaleUpThreashold = (int)(idealThreashold * 0.75);
-    private static final long scaleDownThreashold = (int)(idealThreashold * 0.25);
+    private static long scaleUpThreashold = (int)(idealThreashold * 0.75);
+    private static long scaleDownThreashold = (int)(idealThreashold * 0.25);
 
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms = new AtomicInteger(0);
@@ -67,7 +67,9 @@ public class CMonitor {
     /**
      * Does the aws connection, dynamodb connection and
      * */
-    public static void init() throws AmazonClientException {
+    public static void init(
+            double lowerth,
+            double upperth) throws AmazonClientException {
 
         try {
             credentials = new ProfileCredentialsProvider().getCredentials();
@@ -102,6 +104,9 @@ public class CMonitor {
                             "location (~/.aws/credentials), and is in valid format.",
                     e);
         }
+
+        scaleUpThreashold = (int)(idealThreashold * upperth);
+        scaleDownThreashold = (int)(idealThreashold * lowerth);
 
         TaskStorage.init(false);
 

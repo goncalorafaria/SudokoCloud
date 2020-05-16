@@ -23,7 +23,7 @@ public class LoadBalancer {
     /* Workers : Idealmente seria um Set. */
     private static final Balancer worker = new LoadBalancer.Balancer();
 
-    private static boolean handle = false;
+    private static boolean handle = true;
 
     public LoadBalancer() {
     }
@@ -31,8 +31,15 @@ public class LoadBalancer {
     public static void main(String[] args){
 
         try {
+            double lowerth = 0.25, upperth = 0.75;
 
-            handle = Boolean.parseBoolean(args[0]);
+            if( args.length > 1 ){
+                handle = Boolean.parseBoolean(args[0]);
+                if( args.length > 3 ){
+                    lowerth = Double.parseDouble(args[1]);
+                    upperth = Double.parseDouble(args[2]);
+                }
+            }
 
             Logger.publish(true, false);
             Logger.log("Starting the Load balancer");
@@ -41,7 +48,9 @@ public class LoadBalancer {
             // Load local db
 
             // Connect to aws
-            CMonitor.init();
+            CMonitor.init(
+                    lowerth,
+                    upperth);
 
             // start redirection thread
             worker.start();

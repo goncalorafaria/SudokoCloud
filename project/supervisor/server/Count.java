@@ -70,6 +70,7 @@ public class Count implements java.io.Serializable {
     public long getlocked(){
         return this.br_count_act.get();
     }
+
     public void lock(){
         this.br_count = (double)this.br_count_act.get();
     }

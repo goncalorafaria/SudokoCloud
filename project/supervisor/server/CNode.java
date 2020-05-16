@@ -110,6 +110,7 @@ public class CNode {
         CNode.tunnel.sendbriefing(sest);
 
     }
+
     public static Task getTask() {
         return CNode.getTask(Thread.currentThread().getId());
     }

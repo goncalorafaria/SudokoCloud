@@ -33,6 +33,7 @@ public class BinaryStochasticBanditProblem {
         totalc.decrementAndGet();
         updatec.decrementAndGet();
     }
+
     public int getHit(){
         return hitc.get();
     }
