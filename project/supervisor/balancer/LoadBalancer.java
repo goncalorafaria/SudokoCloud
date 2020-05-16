@@ -6,8 +6,8 @@ import com.sun.net.httpserver.HttpServer;
 import supervisor.util.CloudStandart;
 import supervisor.util.Logger;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.io.*;
+import java.net.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -23,12 +23,17 @@ public class LoadBalancer {
     /* Workers : Idealmente seria um Set. */
     private static final Balancer worker = new LoadBalancer.Balancer();
 
+    private static boolean handle = false;
+
     public LoadBalancer() {
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args){
 
         try {
+
+            handle = Boolean.parseBoolean(args[0]);
+
             Logger.publish(true, false);
             Logger.log("Starting the Load balancer");
 
@@ -42,7 +47,15 @@ public class LoadBalancer {
             worker.start();
 
             HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-            server.createContext("/sudoku", new Request.Handler());
+
+            if( handle ) {
+                Logger.log("Handling failures directly.");
+                server.createContext("/sudoku", new Request.RemoteServer());
+            }else {
+                Logger.log("Not handling failures directly.");
+                server.createContext("/sudoku", new Request.Redirector());
+            }
+
             server.setExecutor(Executors.newCachedThreadPool());
 
             // start http server.
@@ -50,7 +63,6 @@ public class LoadBalancer {
         } catch (Exception e) {
             Logger.log("Terminating VMS" + e.toString());
         }
-
     }
 
     static class Request {
@@ -66,7 +78,7 @@ public class LoadBalancer {
             return this.query + "\n" + this.tunel.toString();
         }
 
-        static class Handler implements HttpHandler {
+        static class Redirector implements HttpHandler {
 
             public void handle(HttpExchange t) {
 
@@ -75,6 +87,41 @@ public class LoadBalancer {
                 LoadBalancer.inqueue.add(
                         new LoadBalancer.Request(query, t)
                 );
+            }
+        }
+
+        static class RemoteServer implements HttpHandler {
+
+            public void handle(HttpExchange t) {
+
+                URI u = t.getRequestURI();
+                String query = u.getQuery();
+
+                LoadBalancer.Request r = new LoadBalancer.Request(query, t);
+
+                CMonitor.Endpoint ep = null;
+
+                boolean go =true;
+                while(go) {
+                    go = false;
+                    try {
+                        ep = CMonitor.decide(CloudStandart.makeKey(r.query));
+
+                        int port = 8000;
+
+                        String solution = HttpRedirection.
+                                passRequestandWait(t, ep.getIp(), port, u);
+
+                        HttpRedirection.passResponse(solution, t);
+
+                    } catch (InterruptedException e) {
+                    } catch (MalformedURLException | URISyntaxException e) {
+                        return;
+                    } catch (IOException e) {
+                        ep.faultdetected();
+                        go = true;
+                    }
+                }
             }
 
         }
@@ -97,7 +144,8 @@ public class LoadBalancer {
                     CMonitor.autoscale(LoadBalancer.inqueue.size());
 
                     if (r != null) {
-                        String redirectPath = CMonitor.decide(CloudStandart.makeKey(r.query));
+                        String redirectPath = CMonitor.decide(
+                                CloudStandart.makeKey(r.query)).getIp();
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 

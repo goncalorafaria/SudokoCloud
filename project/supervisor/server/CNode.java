@@ -13,7 +13,6 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,7 +52,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(true,false);
+        Logger.publish(false,false);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -138,17 +137,13 @@ public class CNode {
             while (active.get()) {
 
                 try {
-                    //Logger.log("Publisher:Halt");
                     Task itask = CNode.taskq.take();
-
                     String tsk = itask.getKey();
-
                     Map<String, String> row;
 
                     row = requestTable.get(tsk);
                     if (row == null)
                         row = new HashMap<>();
-
 
                     for (String mname : itask.metricsK()) {
 
@@ -160,11 +155,15 @@ public class CNode {
                                 cold.aggregate(c);
                                 c = cold;
                             }
+                            String bin = c.toBinary();
+
+                            if( mname.equals("Count") )
+                                CNode.tunnel.stream(tsk, bin);
+
                             row.put(mname, c.toBinary());
                         }
                     }
                     requestTable.put(tsk, row);
-
 
                 } catch (InterruptedException e) {
                     Logger.log(e.getMessage());
@@ -222,16 +221,17 @@ public class CNode {
             String solver = (String)v[SOLVER];
 
             long delta = ((long)value-al.get());
-
-            //(AtomicInteger)v[TURN]).get()
+            
             double est = senddelta(tid, delta, solver,1);
 
             ((AtomicInteger)v[TURN]).getAndIncrement();
-
             al.addAndGet(delta);
             return est;
         }
 
+        public void stream(String tsk, String c){
+            lbq.add("data:"+tsk+":"+c);
+        }
         private void recovery(){
 
             Thread th = Thread.currentThread();
@@ -341,8 +341,6 @@ public class CNode {
                            )
                     );
 
-                    this.out.println("begin:");
-
                     if(downed) {
                         this.recovery();
                         downed = false;
@@ -374,8 +372,8 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
+                            if( mcounter > 2*3 ){
 
-                            if( mcounter > 1*3 ){
                                 go = false;
                                 downed = true;
                                 sc.close();

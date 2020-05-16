@@ -1,6 +1,7 @@
 package supervisor.balancer.estimation;
 
 import supervisor.server.Count;
+import supervisor.storage.Storage;
 import supervisor.storage.TaskStorage;
 import supervisor.util.Logger;
 
@@ -15,7 +16,7 @@ public class Oracle {
     private final Map<String, Map<String, Group>> cachestructure =
             new ConcurrentHashMap<>();
 
-    private final TaskStorage remote = new TaskStorage();
+    private final Storage<String> remote = new TaskStorage();
 
     private final AtomicInteger nelements = new AtomicInteger(0);
 
@@ -42,6 +43,24 @@ public class Oracle {
         treesize.clear();
     }
 
+    public void response(String key, Count c){
+        String[] sv = key.split(":");
+        String solver = sv[0];
+        String board = sv[2];
+        String un = sv[1];
+
+        Map<String, Group> mg = cachestructure.get(solver);
+        Group g = mg.get(board);
+        int inc = g.response(un,c);
+        if (inc == 1) {
+            int cur = nelements.addAndGet(inc);
+            Logger.log(" synchronizing treesize ");
+            increment(g,cur);
+        }
+
+        Logger.log("response ------------:"+key);
+    }
+
     private Group replenish(String key, String solver,String board,String un) {
         Map<String, Group> mg = cachestructure.get(solver);
         Group g;
@@ -53,7 +72,6 @@ public class Oracle {
             synchronized (this.treesize) {
                 this.treesize.add(g);
             }
-
         } else {
             g = mg.get(board);
         }
@@ -63,17 +81,10 @@ public class Oracle {
             Logger.log("go fetch");
             if(value != null) {
                 int inc = g.put(un, value);
-                int cur = nelements.addAndGet(inc);
                 if (inc == 1) {
+                    int cur = nelements.addAndGet(inc);
                     Logger.log(" synchronizing treesize ");
-                    synchronized (this.treesize) {
-                        this.treesize.remove(g);
-                        g.blockKey();
-                        this.treesize.add(g);
-                        if (cur > extra)
-                            trim();
-                    }
-
+                    increment(g,cur);
                 }
             }else{
                 g.revertUpdate();
@@ -86,7 +97,7 @@ public class Oracle {
     public double predict(String key){
         String[] sv = key.split(":");
         String solver = sv[0];
-        String board = sv[2] + ":" + sv[3];
+        String board = sv[2];
         String un = sv[1];
         double est;
         Group g = this.replenish(key,solver,board,un);
@@ -101,6 +112,17 @@ public class Oracle {
         }
 
         return est;
+    }
+
+    private void increment(Group g, int cur){
+        Logger.log(" synchronizing treesize ");
+        synchronized (this.treesize) {
+            this.treesize.remove(g);
+            g.blockKey();
+            this.treesize.add(g);
+            if (cur > extra)
+                trim();
+        }
     }
 
     private void trim(){
