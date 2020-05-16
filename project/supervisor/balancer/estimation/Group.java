@@ -78,6 +78,7 @@ public class Group implements Comparable<Group>{
             try {
                 Count candidate = Count.fromString(value.get("Count"));
                 updateDirect(candidate);
+
             } catch (IOException e) {
                 e.printStackTrace();
             }catch (ClassNotFoundException e){

@@ -120,7 +120,6 @@ public class CMonitor {
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
         boolean go = true;
 
-
         while(go) {
             double exp = 0;
             go = false;
@@ -135,6 +134,7 @@ public class CMonitor {
 
             Logger.log("Average load/per machine:" + exp + "/ machines:" + sep.size() );
 
+
             if (exp <= scaleDownThreashold && activevms.size() > 1) {
                 go = true;
                 Logger.log("discard:");
@@ -147,7 +147,6 @@ public class CMonitor {
                 CMonitor.summon();
             }
         }
-
     }
 
     /**
@@ -456,7 +455,6 @@ public class CMonitor {
                     this.discountLoad(tmp);
                     this.out.println("confirmation:");
                     this.out.flush();
-                    //Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.load.get());
                     break;
                 case "fault-key":
                     double est = CMonitor.requestTable.predict(args[1]);
@@ -483,18 +481,13 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
-                //this.in.readLine();
-
                 this.sc.setSoTimeout(20 * 1000);
-
                 Logger.log("Tunnel open");
-
             } catch (UnknownHostException e) {
                 //Logger.log(e.toString());
             } catch (IOException e) {
                 //Logger.log(e.toString());
             }
-
             return c;
         }
 
@@ -513,7 +506,6 @@ public class CMonitor {
             }
 
         }
-
     }
 
 }

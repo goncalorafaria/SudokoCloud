@@ -138,17 +138,13 @@ public class CNode {
             while (active.get()) {
 
                 try {
-                    //Logger.log("Publisher:Halt");
                     Task itask = CNode.taskq.take();
-
                     String tsk = itask.getKey();
-
                     Map<String, String> row;
 
                     row = requestTable.get(tsk);
                     if (row == null)
                         row = new HashMap<>();
-
 
                     for (String mname : itask.metricsK()) {
 
@@ -167,11 +163,8 @@ public class CNode {
 
                             row.put(mname, c.toBinary());
                         }
-
                     }
                     requestTable.put(tsk, row);
-                    // - c
-
 
                 } catch (InterruptedException e) {
                     Logger.log(e.getMessage());
@@ -229,12 +222,10 @@ public class CNode {
             String solver = (String)v[SOLVER];
 
             long delta = ((long)value-al.get());
-
-            //(AtomicInteger)v[TURN]).get()
+            
             double est = senddelta(tid, delta, solver,1);
 
             ((AtomicInteger)v[TURN]).getAndIncrement();
-
             al.addAndGet(delta);
             return est;
         }
@@ -351,8 +342,6 @@ public class CNode {
                            )
                     );
 
-                    //this.out.println("begin:");
-
                     if(downed) {
                         this.recovery();
                         downed = false;
@@ -384,8 +373,8 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
-
                             if( mcounter > 2*3 ){
+
                                 go = false;
                                 downed = true;
                                 sc.close();

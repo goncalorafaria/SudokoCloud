@@ -20,6 +20,7 @@ public class Estimator {
             String un){
         double est = 50000;
 
+
         switch (solver +  board.split("x")[0] ){
             case "DLX9": est = 111283; break;
             case "DLX16": est = 141388; break;
@@ -31,6 +32,7 @@ public class Estimator {
             case "BFS16": est = 186182; break;
             case "BFS25": est = 478190; break;
             default: est=50000; break;
+
         }
 
         return est;
