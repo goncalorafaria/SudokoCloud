@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class LoadBalancer {
 
@@ -108,10 +109,7 @@ public class LoadBalancer {
                 while(go) {
                     go = false;
                     try {
-                        ep = CMonitor.decide(
-                                CloudStandart.makeKey(r.query),
-                                r,
-                                true);
+                        ep = CMonitor.decide(CloudStandart.makeKey(r.query));
 
                         int port = 8000;
 
@@ -151,9 +149,7 @@ public class LoadBalancer {
 
                     if (r != null) {
                         String redirectPath = CMonitor.decide(
-                                CloudStandart.makeKey(r.query),
-                                r,
-                                false).getIp();
+                                CloudStandart.makeKey(r.query)).getIp();
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 

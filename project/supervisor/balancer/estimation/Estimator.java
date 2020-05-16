@@ -23,13 +23,13 @@ public class Estimator {
         switch (solver +  board.split("x")[0] ){
             case "DLX9": est = 111283; break;
             case "DLX16": est = 141388; break;
-            case "DLX25": est = 111283; break;
+            case "DLX25": est = 406565; break;
             case "CP9" : est = 37552; break;
             case "CP16" : est = 177409; break;
             case "CP25" : est = 360501; break;
             case "BFS9": est = 34110; break;
             case "BFS16": est = 186182; break;
-            case "BFS25": est = 50000; break;
+            case "BFS25": est = 478190; break;
             default: est=50000; break;
         }
 
