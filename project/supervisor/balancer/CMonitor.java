@@ -407,7 +407,7 @@ public class CMonitor {
 
             while(go) {
                 try {
-                    this.in.readLine();
+                    Logger.log("QUEUEUE#####" + this.in.readLine() );
                     this.sc.setSoTimeout(20 * 1000);
                     go = false;
                 } catch (IOException e) {
@@ -423,7 +423,7 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    if( offc > 5){
+                    if( offc > 30){
                         this.faultdetected();
                         return;
                     }

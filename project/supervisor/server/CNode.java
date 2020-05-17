@@ -352,6 +352,7 @@ public class CNode {
                     String message;
                     int mcounter = 0;
 
+                    Logger.log("#####");
                     while (go) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
