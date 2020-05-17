@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -124,35 +125,32 @@ public class CMonitor {
     static void autoscale() {
 
         HashSet<CMonitor.Endpoint> a = new HashSet<>();
-        boolean go = true;
+        double exp = 0;
+        Collection<Endpoint> sep = vmstates.values();
 
-        while(go) {
-            double exp = 0;
-            go = false;
-            Collection<Endpoint> sep = vmstates.values();
-            for (Endpoint e : sep) {
-                Logger.log(e.toString());
-                exp += e.getLoad();
-            }
-
-            if( sep.size() > 0 )
-                exp = exp / sep.size();
-
-            Logger.log("Average load/per machine:" + exp + "/ machines:" + sep.size() );
-
-
-            if (exp <= scaleDownThreashold && activevms.size() > 1) {
-                go = true;
-                Logger.log("discard:");
-                schedulerecall(Collections.min(sep).vm);
-            }
-
-            if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
-                go = true;
-                Logger.log("summon:");
-                CMonitor.summon();
-            }
+        for (Endpoint e : sep) {
+            Logger.log(e.toString());
+            exp += e.getLoad();
         }
+
+        if( sep.size() > 0 )
+            exp = exp / sep.size();
+
+        Logger.log("Average load/per machine:" + exp + "/ machines:" + sep.size() + " - " + startingvms.get());
+
+
+        if (exp <= scaleDownThreashold && activevms.size() > 1) {
+
+            Logger.log("discard:");
+            schedulerecall(Collections.min(sep).vm);
+        }
+
+        if (exp >= scaleUpThreashold || (startingvms.get()==0 && sep.size() == 0) ) {
+
+            Logger.log("summon:");
+            CMonitor.summon();
+        }
+
     }
 
     /**
@@ -208,8 +206,10 @@ public class CMonitor {
     static void serverRecovery(){
 
         for( String newInstanceId : getActiveInstances().keySet())
-            if( ! CMonitor.vmstates.containsKey(newInstanceId))
+            if( ! CMonitor.vmstates.containsKey(newInstanceId)) {
+                CMonitor.startingvms.addAndGet(1);
                 CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
+            }
     }
 
     /**
@@ -403,6 +403,18 @@ public class CMonitor {
             CMonitor.activevms.add(vm);
             CMonitor.startingvms.addAndGet(-1);
 
+            boolean go = true;
+
+            while(go) {
+                try {
+                    this.in.readLine();
+                    this.sc.setSoTimeout(20 * 1000);
+                    go = false;
+                } catch (IOException e) {
+                    go = true;
+                }
+            }
+
             Logger.log("Fetching: " + vm);
             int offc = 0;
             while (active.get() || this.qsize.get() > 0) {
@@ -411,7 +423,11 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    //Logger.log(e.toString());
+                    if( offc > 5){
+                        this.faultdetected();
+                        return;
+                    }
+                    Logger.log( vm + ">" + e.toString() + "|" + active.get());
                 }
             }
             this.recalling();
@@ -487,7 +503,6 @@ public class CMonitor {
                         sc.getOutputStream()
                 );
 
-                this.sc.setSoTimeout(20 * 1000);
                 Logger.log("Tunnel open");
             } catch (UnknownHostException e) {
                 //Logger.log(e.toString());

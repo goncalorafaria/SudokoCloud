@@ -132,6 +132,7 @@ public class LoadBalancer {
                     } catch (MalformedURLException | URISyntaxException e) {
                         return;
                     } catch (IOException e) {
+                        Logger.log(e.toString());
                         ep.faultdetected();
                         go = true;
                     }
