@@ -403,10 +403,8 @@ public class CMonitor {
             CMonitor.activevms.add(vm);
             CMonitor.startingvms.addAndGet(-1);
 
+
             this.out.println("begin:");
-            try { this.in.readLine();
-            }catch (IOException e){
-            }
 
             Logger.log("Fetching: " + vm);
             int offc = 0;

@@ -342,8 +342,7 @@ public class CNode {
                            )
                     );
 
-                    this.in.readLine();
-                    this.out.println("begin:");
+                    Logger.log(".." + this.in.readLine());
 
                     if(downed) {
                         this.recovery();
