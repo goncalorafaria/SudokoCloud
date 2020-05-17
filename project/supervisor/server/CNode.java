@@ -110,6 +110,7 @@ public class CNode {
         CNode.tunnel.sendbriefing(sest);
 
     }
+
     public static Task getTask() {
         return CNode.getTask(Thread.currentThread().getId());
     }
@@ -356,9 +357,7 @@ public class CNode {
                             this.out.println(message);
                             this.out.flush();
                         } else {
-                            Logger.log("+ sch briefing.");
                             CNode.performBriefing();
-                            Logger.log("- sch briefing.");
                             if( this.in.ready() ) {
                                 mcounter = 0;
                                 String[] args = this.in.
@@ -372,7 +371,7 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
-                            if( mcounter > 2*3 ){
+                            if( mcounter > 4 ){
 
                                 go = false;
                                 downed = true;

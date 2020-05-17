@@ -20,7 +20,6 @@ public class Oracle {
 
     private final AtomicInteger nelements = new AtomicInteger(0);
 
-
     private final ConcurrentSkipListSet<Group> treesize =
             new ConcurrentSkipListSet<>();
 

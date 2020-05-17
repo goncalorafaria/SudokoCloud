@@ -14,7 +14,6 @@ public class Count implements java.io.Serializable {
     long inc_count = 0;
     double br_s = 0;
     AtomicLong br_count_act = new AtomicLong(0L);
-
     public long n = 1;
 
     public Count() {
@@ -70,6 +69,7 @@ public class Count implements java.io.Serializable {
     public long getlocked(){
         return this.br_count_act.get();
     }
+
     public void lock(){
         this.br_count = (double)this.br_count_act.get();
     }

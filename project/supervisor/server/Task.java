@@ -7,7 +7,6 @@ public class Task {
 
     private final String key;
     private Long time = System.currentTimeMillis();;
-
     private final Map<String, Count> metrics = new ConcurrentHashMap<>();
 
     // TODO : Extend to various types of Metrics.

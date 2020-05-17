@@ -23,7 +23,7 @@ public class LoadBalancer {
     /* Workers : Idealmente seria um Set. */
     private static final Balancer worker = new LoadBalancer.Balancer();
 
-    private static boolean handle = false;
+    private static boolean handle = true;
 
     public LoadBalancer() {
     }
@@ -31,8 +31,19 @@ public class LoadBalancer {
     public static void main(String[] args){
 
         try {
+            double lowerth = 0.25, upperth = 0.75;
+            int cachesize = 200;
 
-            handle = Boolean.parseBoolean(args[0]);
+            if( args.length > 0 ){
+                handle = Boolean.parseBoolean(args[0]);
+                if( args.length > 2 ){
+                    lowerth = Double.parseDouble(args[1]);
+                    upperth = Double.parseDouble(args[2]);
+                    if( args.length > 3){
+                        cachesize = Integer.parseInt(args[3]);
+                    }
+                }
+            }
 
             Logger.publish(true, false);
             Logger.log("Starting the Load balancer");
@@ -41,7 +52,10 @@ public class LoadBalancer {
             // Load local db
 
             // Connect to aws
-            CMonitor.init();
+            CMonitor.init(
+                    lowerth,
+                    upperth,
+                    cachesize);
 
             // start redirection thread
             worker.start();
@@ -109,10 +123,10 @@ public class LoadBalancer {
 
                         int port = 8000;
 
-                        String solution = HttpRedirection.
+                        String solution = Redirect.
                                 passRequestandWait(t, ep.getIp(), port, u);
 
-                        HttpRedirection.passResponse(solution, t);
+                        Redirect.passResponse(solution, t);
 
                     } catch (InterruptedException e) {
                     } catch (MalformedURLException | URISyntaxException e) {
@@ -139,9 +153,9 @@ public class LoadBalancer {
 
             while (LoadBalancer.active.get()) {
                 try {
-                    r = LoadBalancer.inqueue.poll(LoadBalancer.waitTime, TimeUnit.MILLISECONDS);
 
-                    CMonitor.autoscale(LoadBalancer.inqueue.size());
+                    CMonitor.autoscale();
+                    r = LoadBalancer.inqueue.poll(LoadBalancer.waitTime, TimeUnit.MILLISECONDS);
 
                     if (r != null) {
                         String redirectPath = CMonitor.decide(
@@ -149,7 +163,7 @@ public class LoadBalancer {
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
-                        HttpRedirection.send(r.tunel, location);
+                        Redirect.send(r.tunel, location);
                     }else{
                         Logger.log("Autoscalling round ");
                     }

@@ -43,6 +43,9 @@ https://console.aws.amazon.com/iam/home?#security_credential
 
 * Run the script ` $ ./balancer.sh `.
 
+The load balancer application can be configured. The program expects as arguments the parameters for the autoscalar and whether to handle faults. `$ java supervisor.balancer.LoadBalancer --handle_faults --lower_threashold --upper_threash`.
+The variable `--handle_faults` can either be `true or false` and the remaining ones are real values from 0 to 1.
+
 #### Data
 
 The data from the experiments is in data/dataplot.ipynb.(Jupyter notebook) The experiments were performed in the Aws instances and stored using the LocalStorage class. Using the LocalStorageReader program the metrics were transformed into an appropriate format for plotting with python.

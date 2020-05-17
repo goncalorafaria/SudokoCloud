@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-
 public class LocalStorage<V> implements Storage<V> {
     /**
      * Implementação de uma tabela através de um ficheiro.
@@ -72,7 +71,6 @@ public class LocalStorage<V> implements Storage<V> {
     public Set<String> keys() {
         return (Set<String>) LocalStorage.database.get(this.tablename).keySet();
     }
-
 
     public Map<String,V> remove(String key){
         Map<String, Map<String,V>> table =
