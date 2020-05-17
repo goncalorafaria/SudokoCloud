@@ -372,6 +372,7 @@ public class CNode {
                                 mcounter++;
                             }
                             if( mcounter > 4 ){
+
                                 go = false;
                                 downed = true;
                                 sc.close();

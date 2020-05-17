@@ -49,7 +49,6 @@ public class CMonitor {
     private static long scaleUpThreashold = (int)(idealThreashold * 0.75);
     private static long scaleDownThreashold = (int)(idealThreashold * 0.25);
 
-
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms = new AtomicInteger(0);
 
