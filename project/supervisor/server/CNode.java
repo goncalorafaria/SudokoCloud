@@ -342,7 +342,6 @@ public class CNode {
                            )
                     );
 
-                    Logger.log(".." + this.in.readLine());
                     this.out.println("begin:");
                     this.out.flush();
 
