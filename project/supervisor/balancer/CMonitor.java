@@ -403,16 +403,9 @@ public class CMonitor {
             CMonitor.activevms.add(vm);
             CMonitor.startingvms.addAndGet(-1);
 
-            boolean go = true;
-
-            while(go) {
-                try {
-                    Logger.log("QUEUEUE#####" + this.in.readLine() );
-                    this.sc.setSoTimeout(20 * 1000);
-                    go = false;
-                } catch (IOException e) {
-                    go = true;
-                }
+            this.out.println("begin:");
+            try { this.in.readLine();
+            }catch (IOException e){
             }
 
             Logger.log("Fetching: " + vm);
@@ -492,7 +485,7 @@ public class CMonitor {
             try {
                 this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
                 sc.setTcpNoDelay(true);
-
+                this.sc.setSoTimeout(20 * 1000);
                 c = false;
 
                 this.in = new BufferedReader(
@@ -502,6 +495,7 @@ public class CMonitor {
                 this.out = new PrintWriter(
                         sc.getOutputStream()
                 );
+
 
                 Logger.log("Tunnel open");
             } catch (UnknownHostException e) {

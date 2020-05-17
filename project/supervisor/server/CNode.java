@@ -52,7 +52,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(false,false);
+        Logger.publish(false,true);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -342,6 +342,7 @@ public class CNode {
                            )
                     );
 
+                    this.in.readLine();
                     this.out.println("begin:");
 
                     if(downed) {
@@ -352,7 +353,7 @@ public class CNode {
                     String message;
                     int mcounter = 0;
 
-                    Logger.log("#####");
+                    Logger.log("Working!");
                     while (go) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
@@ -374,8 +375,7 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
-                            if( mcounter > 400 ){
-
+                            if( mcounter > 4 ){
                                 go = false;
                                 downed = true;
                                 sc.close();
