@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-
 public class LocalStorage<V> implements Storage<V> {
     /**
      * Implementação de uma tabela através de um ficheiro.

@@ -32,12 +32,16 @@ public class LoadBalancer {
 
         try {
             double lowerth = 0.25, upperth = 0.75;
+            int cachesize = 200;
 
-            if( args.length > 1 ){
+            if( args.length > 0 ){
                 handle = Boolean.parseBoolean(args[0]);
-                if( args.length > 3 ){
+                if( args.length > 2 ){
                     lowerth = Double.parseDouble(args[1]);
                     upperth = Double.parseDouble(args[2]);
+                    if( args.length > 3){
+                        cachesize = Integer.parseInt(args[3]);
+                    }
                 }
             }
 
@@ -50,7 +54,8 @@ public class LoadBalancer {
             // Connect to aws
             CMonitor.init(
                     lowerth,
-                    upperth);
+                    upperth,
+                    cachesize);
 
             // start redirection thread
             worker.start();
@@ -148,9 +153,9 @@ public class LoadBalancer {
 
             while (LoadBalancer.active.get()) {
                 try {
-                    r = LoadBalancer.inqueue.poll(LoadBalancer.waitTime, TimeUnit.MILLISECONDS);
 
-                    CMonitor.autoscale(LoadBalancer.inqueue.size());
+                    CMonitor.autoscale();
+                    r = LoadBalancer.inqueue.poll(LoadBalancer.waitTime, TimeUnit.MILLISECONDS);
 
                     if (r != null) {
                         String redirectPath = CMonitor.decide(

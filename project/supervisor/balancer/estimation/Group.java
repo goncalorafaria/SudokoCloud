@@ -260,9 +260,11 @@ public class Group implements Comparable<Group>{
             float sndv = Float.MAX_VALUE;
 
             Set<String> ks = table.keySet();
+            Set<Integer> kis = new HashSet<>();
 
             for (String k : ks) {
                 int candidate = Integer.parseInt(k);
+                kis.add(candidate);
                 if (candidate < target) {
                     if (before < candidate)
                         before = candidate;
@@ -271,28 +273,6 @@ public class Group implements Comparable<Group>{
                         after = candidate;
                 }
 
-                dif = (candidate - target);
-                dif = dif * dif;
-
-                if (fst != -1 && snd != -1) {
-                    if (dif <= fstv) {
-                        fst = candidate;
-                        fstv = dif;
-                    } else {
-                        if (dif < sndv) {
-                            snd = candidate;
-                            sndv = dif;
-                        }
-                    }
-                } else {
-                    if (fst == -1) {
-                        fst = candidate;
-                        fstv = dif;
-                    } else {
-                        snd = candidate;
-                        sndv = dif;
-                    }
-                }
             }
 
             l.add(new Object[2]);
@@ -300,8 +280,10 @@ public class Group implements Comparable<Group>{
             String sbefore, safter;
 
             if (before == Integer.MIN_VALUE || after == Integer.MAX_VALUE) {
-                sbefore = String.valueOf(fst);
-                safter = String.valueOf(snd);
+                sbefore = String.valueOf(
+                        Collections.min(kis));
+                safter= String.valueOf(
+                        Collections.max(kis));
             } else {
                 sbefore = String.valueOf(before);
                 safter = String.valueOf(after);
