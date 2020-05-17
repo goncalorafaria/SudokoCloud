@@ -406,6 +406,7 @@ public class CMonitor {
 
             this.out.println("begin:");
             this.out.flush();
+            try { this.in.readLine(); }catch (IOException e){}
 
             Logger.log("Fetching: " + vm);
             int offc = 0;

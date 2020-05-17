@@ -50,7 +50,6 @@ public class LoadBalancer {
 
             CloudStandart.init();
             // Load local db
-
             // Connect to aws
             CMonitor.init(
                     lowerth,
@@ -119,7 +118,9 @@ public class LoadBalancer {
                 while(go) {
                     go = false;
                     try {
-                        ep = CMonitor.decide(CloudStandart.makeKey(r.query));
+                        ep = CMonitor.decide(
+                                CloudStandart.makeKey(r.query)
+                        );
 
                         int port = 8000;
 
