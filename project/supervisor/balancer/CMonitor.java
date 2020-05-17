@@ -405,6 +405,7 @@ public class CMonitor {
 
 
             this.out.println("begin:");
+            this.out.flush();
 
             Logger.log("Fetching: " + vm);
             int offc = 0;
@@ -414,7 +415,7 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    if( offc > 30){
+                    if( offc > 10){
                         this.faultdetected();
                         return;
                     }

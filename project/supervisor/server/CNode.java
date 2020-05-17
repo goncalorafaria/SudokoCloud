@@ -356,6 +356,7 @@ public class CNode {
                     while (go) {
                         message = this.lbq.poll(20, TimeUnit.SECONDS);
 
+                        Logger.log("message:" + message);
                         if (message != null) {
                             this.out.println(message);
                             this.out.flush();
