@@ -374,7 +374,7 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
-                            if( mcounter > 4 ){
+                            if( mcounter > 400 ){
 
                                 go = false;
                                 downed = true;
