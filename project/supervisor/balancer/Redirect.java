@@ -73,6 +73,8 @@ public class Redirect {
 
         int status = cn.getResponseCode();
 
+        Logger.log("status code:" + status);
+
         InputStream is = cn.getInputStream();
 
         is.read(buffer);
@@ -82,6 +84,7 @@ public class Redirect {
 
     public static void passResponse(String solution, HttpExchange t) throws IOException {
 
+        Logger.log("solution");
         Headers hdrs = t.getResponseHeaders();
         hdrs.add("Content-Type", "application/json");
         hdrs.add("Access-Control-Allow-Origin", "*");

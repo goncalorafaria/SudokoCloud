@@ -114,7 +114,7 @@ public class CMonitor {
 
         CMonitor.requestTable = new Oracle(cachesize);
 
-        CMonitor.serverRecovery();
+        //CMonitor.serverRecovery();
     }
 
     /**

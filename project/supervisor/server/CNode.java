@@ -387,7 +387,7 @@ public class CNode {
                     //Logger.log("Tunnel open");
 
                 } catch (IOException e) {
-                    Logger.log(e.toString());
+                    Logger.log("outer" + e.toString());
                     Logger.log("Load Balancer most likely went down. Exception");
                     downed=true;
                 } catch (InterruptedException e) {

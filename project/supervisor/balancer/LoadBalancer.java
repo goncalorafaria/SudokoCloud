@@ -68,7 +68,6 @@ public class LoadBalancer {
                 Logger.log("Not handling failures directly.");
                 server.createContext("/sudoku", new Request.Redirector());
             }
-
             server.setExecutor(Executors.newCachedThreadPool());
 
             // start http server.
@@ -78,9 +77,10 @@ public class LoadBalancer {
         }
     }
 
-    static class Request {
+    static class Request extends Thread{
         String query;
         HttpExchange tunel;
+        URI uri;
 
         Request(String query, HttpExchange t) {
             this.query = query;
@@ -111,35 +111,42 @@ public class LoadBalancer {
                 String query = u.getQuery();
 
                 LoadBalancer.Request r = new LoadBalancer.Request(query, t);
-
-                CMonitor.Endpoint ep = null;
-
-                boolean go =true;
-                while(go) {
-                    go = false;
-                    try {
-                        ep = CMonitor.decide(
-                                CloudStandart.makeKey(r.query)
-                        );
-
-                        int port = 8000;
-
-                        String solution = Redirect.
-                                passRequestandWait(t, ep.getIp(), port, u);
-
-                        Redirect.passResponse(solution, t);
-
-                    } catch (InterruptedException e) {
-                    } catch (MalformedURLException | URISyntaxException e) {
-                        return;
-                    } catch (IOException e) {
-                        Logger.log(e.toString());
-                        ep.faultdetected();
-                        go = true;
-                    }
-                }
+                r.uri = u;
+                r.start();
             }
 
+        }
+
+        public void run(){
+            CMonitor.Endpoint ep=null;
+
+            boolean go =true;
+            while(go) {
+                go = false;
+                try {
+
+                    String key = CloudStandart.makeKey(this.query);
+
+                    ep = CMonitor.decide(
+                            key
+                    );
+
+                    int port = 8000;
+
+                    String solution = Redirect.
+                            passRequestandWait(tunel, ep.getIp(), port, uri);
+
+                    Redirect.passResponse(solution, tunel);
+
+                } catch (InterruptedException e) {
+                } catch (MalformedURLException | URISyntaxException e) {
+                    return;
+                } catch (IOException e) {
+                    Logger.log("outer issue:" + e.toString());
+                    ep.faultdetected();
+                    go = true;
+                }
+            }
         }
 
     }
