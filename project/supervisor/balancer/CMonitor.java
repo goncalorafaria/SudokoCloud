@@ -331,8 +331,7 @@ public class CMonitor {
         private final String vm;
         private final AtomicBoolean active = new AtomicBoolean(true);
         private final AtomicInteger qsize = new AtomicInteger(0);
-        private final Map<String, BlockingQueue<LoadBalancer.Request>> linked =
-                new ConcurrentHashMap<>();
+
         private String publicip;
         private BufferedReader in;
         private PrintWriter out;
@@ -366,15 +365,6 @@ public class CMonitor {
 
         public String toString(){
             return "|/"+this.vm+"| active:"+this.active.get()+":-=-:"+ this.load+"\\|";
-        }
-
-        public void listening( String key, LoadBalancer.Request r){
-            BlockingQueue<LoadBalancer.Request> q = this.linked.get(key);
-            if( q == null){
-                q = new LinkedBlockingDeque<>();
-                this.linked.put(key,q);
-            }
-            q.add(r);
         }
 
         public long getLoad(){ return load.get();}
@@ -435,7 +425,7 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    if( offc > 4){
+                    if( offc > 3){
                         this.faultdetected();
                         this.active.set(false);
                         return;
@@ -453,11 +443,6 @@ public class CMonitor {
 
             CMonitor.forcedrecall(this.vm);
 
-            for( Queue<LoadBalancer.Request> t : this.linked.values())
-                for( LoadBalancer.Request r: t)
-                    t.notify();
-
-                this.linked.clear();
         }
 
         boolean isActive(){
@@ -479,14 +464,9 @@ public class CMonitor {
             String[] args = in.readLine().split(":");
             Logger.log(args[0]);
             switch (args[0]){
-                case "data" :
+                case "data" :{
                     String key = args[1]+":"+args[2]+":"+args[3];
-                    try {
-                        Logger.log(key + "DATA");
-                        LoadBalancer.Request r = this.linked.get(key).take();
-                        synchronized (r){r.notify();}
-                    }catch (InterruptedException e){
-                    }
+
                     try {
                         Count c = Count.fromString(args[4]);
                         CMonitor.jobresponse(key,c);
@@ -495,24 +475,28 @@ public class CMonitor {
                     }catch (ClassNotFoundException e){
                     }
                     break;
-                case "queue" :
+                }
+                case "queue" :{
                     this.qsize.getAndAdd(
                             Integer.parseInt(
                                     args[1]));
                     //Logger.log("<" + this.vm + ">" + args[0] + ":"+ this.qsize.get());
                     break;
-                case "loadreport" :
+                }
+                case "loadreport" :{
                     long tmp = Long.parseLong(
                             args[1]);
                     this.discountLoad(tmp);
                     this.out.println("confirmation:");
                     this.out.flush();
                     break;
-                case "fault-key":
+                }
+                case "fault-key":{
                     double est = CMonitor.requestTable.predict(args[1]);
                     this.scheduleLoad(est);
                     Logger.log("fault-key" + ":" + args[1] + ":" + est);
                     break;
+                }
                 default: Logger.log("swithc default:" + args[0]);
             }
         }
@@ -522,7 +506,7 @@ public class CMonitor {
             try {
                 this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
                 sc.setTcpNoDelay(true);
-                this.sc.setSoTimeout(20 * 1000);
+                this.sc.setSoTimeout(2000);
                 c = false;
 
                 this.in = new BufferedReader(

@@ -7,6 +7,7 @@ import supervisor.util.Logger;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Redirect {
     /**
@@ -40,12 +41,15 @@ public class Redirect {
     }
 
     private byte[] buffer = null;
-    private HttpURLConnection cn = null;
+    HttpURLConnection cn = null;
     HttpExchange t;
+
 
     public Redirect(HttpExchange t){
         this.t = t;
     }
+
+
 
     public void passRequest(String ip, int port, URI inu)
             throws URISyntaxException, IOException {
@@ -73,6 +77,7 @@ public class Redirect {
         cn.setUseCaches(false);
         cn.setDoInput(true);
         cn.setDoOutput(true);
+        //cn.setReadTimeout(1);
 
         DataOutputStream wr = new DataOutputStream (
                 cn.getOutputStream());
@@ -89,6 +94,7 @@ public class Redirect {
         //int status = cn.getResponseCode();
         //
         InputStream is = cn.getInputStream();
+
         is.read(buffer);
 
         return new String(buffer);

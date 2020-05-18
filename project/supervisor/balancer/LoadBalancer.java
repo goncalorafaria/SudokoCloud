@@ -87,6 +87,7 @@ public class LoadBalancer {
         String query;
         Redirect redirect;
         URI uri;
+        AtomicBoolean shoudlread = new AtomicBoolean(false);
 
         Request(String query, HttpExchange t) {
             this.query = query;
@@ -129,21 +130,24 @@ public class LoadBalancer {
             String key = CloudStandart.makeKey(this.query);
             String solution=null;
             while(go){
+                go =false;
                 try {
                     CMonitor.Endpoint ep = CMonitor.decide(
                             key);
 
-                    ep.listening(key,this);
+                    //ep.listening(key,this);
                     int port = 8000;
                     this.redirect.passRequest(ep.getIp(), port, uri);
 
                     try {
-                        synchronized (this) { this.wait(); }
-                        Logger.log("AWAKEN");
-                    } catch (InterruptedException e) {
-                        Logger.log("read timeout:" + e.toString());
+                        this.redirect.cn.getInputStream();
+                    }catch(ConnectException e ){
+                        go = true;
+                        ep.faultdetected();
+                    }catch (IOException e){
+                        Logger.log("justsend" + e.toString());
                     }
-                    go = !ep.isActive();
+                    Logger.log("IS NOT BLOCKED");
 
                 }catch (InterruptedException e){
                     Logger.log("error balancing:" + e.toString());
@@ -151,6 +155,7 @@ public class LoadBalancer {
                     Logger.log("error passing message:" + e.toString());
                 }
             }
+
             try {
                 solution = this.redirect.readResponse();
                 this.redirect.passResponse(solution);

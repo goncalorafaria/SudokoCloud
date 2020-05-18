@@ -353,7 +353,7 @@ public class CNode {
 
                     Logger.log("Working!");
                     while (go) {
-                        message = this.lbq.poll(20, TimeUnit.SECONDS);
+                        message = this.lbq.poll(2, TimeUnit.SECONDS);
 
                         Logger.log("message:" + message);
                         if (message != null) {
