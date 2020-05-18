@@ -147,7 +147,7 @@ public class LoadBalancer {
                     }catch (IOException e){
                         Logger.log("justsend" + e.toString());
                     }
-                    Logger.log("IS NOT BLOCKED");
+                    //Logger.log("IS NOT BLOCKED");
 
                 }catch (InterruptedException e){
                     Logger.log("error balancing:" + e.toString());

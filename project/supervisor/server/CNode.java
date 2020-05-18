@@ -52,7 +52,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(false,true);
+        Logger.publish(false,false);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -353,7 +353,7 @@ public class CNode {
 
                     Logger.log("Working!");
                     while (go) {
-                        message = this.lbq.poll(2, TimeUnit.SECONDS);
+                        message = this.lbq.poll(5, TimeUnit.SECONDS);
 
                         Logger.log("message:" + message);
                         if (message != null) {

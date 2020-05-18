@@ -201,7 +201,7 @@ public class CMonitor {
         CMonitor.vmstates.remove(vmid);
         CMonitor.activevms.remove(vmid);
 
-        //CMonitor.recall(vmid);
+        CMonitor.recall(vmid);
         //LoadBalancer.reschedule(requests);
     }
 
@@ -425,12 +425,12 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    if( offc > 3){
+                    if( offc >= 3){
                         this.faultdetected();
                         this.active.set(false);
                         return;
                     }
-                    Logger.log( vm + ">" + e.toString() + "|" + active.get());
+                    //Logger.log( vm + ">" + e.toString() + "|" + active.get());
                 }
             }
             this.recalling();
@@ -462,7 +462,7 @@ public class CMonitor {
 
         private void fetching() throws IOException{
             String[] args = in.readLine().split(":");
-            Logger.log(args[0]);
+
             switch (args[0]){
                 case "data" :{
                     String key = args[1]+":"+args[2]+":"+args[3];
@@ -506,7 +506,7 @@ public class CMonitor {
             try {
                 this.sc = new Socket(this.publicip, CloudStandart.inbound_channel_port);
                 sc.setTcpNoDelay(true);
-                this.sc.setSoTimeout(2000);
+                this.sc.setSoTimeout(5000);
                 c = false;
 
                 this.in = new BufferedReader(
