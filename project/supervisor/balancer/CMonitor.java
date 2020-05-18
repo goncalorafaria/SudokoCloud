@@ -427,16 +427,6 @@ public class CMonitor {
             CMonitor.activevms.add(vm);
             CMonitor.startingvms.addAndGet(-1);
 
-            boolean go = true;
-            while(go) {
-                try {
-                    Logger.log("###" + this.in.readLine());
-                    go = false;
-                }catch (IOException e){
-                    Logger.log("waiting shit!");
-                    go=true;}
-            }
-
             Logger.log("Fetching: " + vm);
             int offc = 0;
             while (active.get() || this.qsize.get() > 0) {

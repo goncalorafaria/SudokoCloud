@@ -343,9 +343,6 @@ public class CNode {
                            )
                     );
 
-                    this.out.println("begin:");
-                    this.out.flush();
-
                     if(downed) {
                         this.recovery();
                         downed = false;
