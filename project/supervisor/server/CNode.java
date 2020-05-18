@@ -158,8 +158,9 @@ public class CNode {
                             }
                             String bin = c.toBinary();
 
-                            if( mname.equals("Count") )
+                            if( mname.equals("Count") ) {
                                 CNode.tunnel.stream(tsk, bin);
+                            }
 
                             row.put(mname, c.toBinary());
                         }
@@ -376,7 +377,7 @@ public class CNode {
                             }else{
                                 mcounter++;
                             }
-                            if( mcounter > 15 ){
+                            if( mcounter > 4 ){
                                 go = false;
                                 downed = true;
                                 sc.close();

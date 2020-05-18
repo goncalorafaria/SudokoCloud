@@ -10,6 +10,7 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.util.Base64;
+import supervisor.balancer.estimation.Estimator;
 import supervisor.balancer.estimation.Oracle;
 import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
@@ -24,8 +25,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,27 +51,32 @@ public class CMonitor {
     private static long scaleDownThreashold = (int)(idealThreashold * 0.25);
 
     /* number of virtual machines starting. */
-    private static final AtomicInteger startingvms = new AtomicInteger(0);
+    private static final AtomicInteger startingvms =
+            new AtomicInteger(0);
 
     /* dictionary of requested virtual machines. */
-    private static final Map<String, CMonitor.Endpoint> vmstates = new ConcurrentSkipListMap<>();
+    private static final Map<String, CMonitor.Endpoint> vmstates =
+            new ConcurrentHashMap<>();
 
     /* Storage persistente que guarda o historico das metricas para cada pedido. */
     private static Oracle requestTable;
 
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
-    private final static Set<String> activevms = new ConcurrentSkipListSet<>();
+    private final static Set<String> activevms =
+            Collections.newSetFromMap(
+                    new ConcurrentHashMap<String,Boolean>());
 
     /* script executed in the vm before running the webserver. */
     private static String launchscript;
-
+    private static String elbvm;
     /**
      * Does the aws connection, dynamodb connection and
      * */
     public static void init(
             double lowerth,
             double upperth,
-            int cachesize) throws AmazonClientException {
+            int cachesize,
+            String me) throws AmazonClientException {
 
         try {
             credentials = new ProfileCredentialsProvider().getCredentials();
@@ -90,14 +95,14 @@ public class CMonitor {
                         "sudo echo " + bsc.getAWSSecretKey() + " >> cred.txt\n" +
                         "sudo echo " + bsc.getSessionToken() + " >> cred.txt\n" +
                         //"sudo ./redo.sh \n" +
-                        "./server.sh \n";
+                        "./server.sh > out.txt \n";
             }else {
                 launchscript = "#!/bin/bash \n" +
                         "cd /home/ec2-user\n" +
                         "sudo echo " + credentials.getAWSAccessKeyId() + " > cred.txt\n" +
                         "sudo echo " + credentials.getAWSSecretKey() + " >> cred.txt\n" +
                         //"sudo ./redo.sh \n" +
-                        "./server.sh \n";
+                        "./server.sh > out.txt \n";
             }
         } catch (Exception e) {
             throw new AmazonClientException(
@@ -114,7 +119,8 @@ public class CMonitor {
 
         CMonitor.requestTable = new Oracle(cachesize);
 
-        //CMonitor.serverRecovery();
+        elbvm = me;
+        CMonitor.serverRecovery();
     }
 
     /**
@@ -207,8 +213,15 @@ public class CMonitor {
 
         for( String newInstanceId : getActiveInstances().keySet())
             if( ! CMonitor.vmstates.containsKey(newInstanceId)) {
-                CMonitor.startingvms.addAndGet(1);
-                CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
+                if(elbvm != null ) {
+                    if( !newInstanceId.equals(elbvm) ) {
+                        CMonitor.startingvms.addAndGet(1);
+                        CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
+                    }
+                } else {
+                    CMonitor.startingvms.addAndGet(1);
+                    CMonitor.vmstates.put(newInstanceId, new Endpoint(newInstanceId));
+                }
             }
     }
 
@@ -318,6 +331,8 @@ public class CMonitor {
         private final String vm;
         private final AtomicBoolean active = new AtomicBoolean(true);
         private final AtomicInteger qsize = new AtomicInteger(0);
+        private final Map<String, BlockingQueue<LoadBalancer.Request>> linked =
+                new ConcurrentHashMap<>();
         private String publicip;
         private BufferedReader in;
         private PrintWriter out;
@@ -351,6 +366,15 @@ public class CMonitor {
 
         public String toString(){
             return "|/"+this.vm+"| active:"+this.active.get()+":-=-:"+ this.load+"\\|";
+        }
+
+        public void listening( String key, LoadBalancer.Request r){
+            BlockingQueue<LoadBalancer.Request> q = this.linked.get(key);
+            if( q == null){
+                q = new LinkedBlockingDeque<>();
+                this.linked.put(key,q);
+            }
+            q.add(r);
         }
 
         public long getLoad(){ return load.get();}
@@ -394,7 +418,7 @@ public class CMonitor {
             while (bcalling && active.get()) {
                 try {
                     bcalling = calling();
-                    sleep(1000 * 2);
+                    sleep(1000);
                 } catch (InterruptedException e) {
                     //Logger.log(e.toString());
                 }
@@ -421,8 +445,9 @@ public class CMonitor {
                     offc = 0;
                 } catch (IOException e) {
                     offc++;
-                    if( offc > 10){
+                    if( offc > 4){
                         this.faultdetected();
+                        this.active.set(false);
                         return;
                     }
                     Logger.log( vm + ">" + e.toString() + "|" + active.get());
@@ -437,6 +462,16 @@ public class CMonitor {
             }
 
             CMonitor.forcedrecall(this.vm);
+
+            for( Queue<LoadBalancer.Request> t : this.linked.values())
+                for( LoadBalancer.Request r: t)
+                    t.notify();
+
+                this.linked.clear();
+        }
+
+        boolean isActive(){
+            return this.active.get();
         }
 
         private void recalling() {
@@ -452,9 +487,16 @@ public class CMonitor {
 
         private void fetching() throws IOException{
             String[] args = in.readLine().split(":");
+            Logger.log(args[0]);
             switch (args[0]){
                 case "data" :
                     String key = args[1]+":"+args[2]+":"+args[3];
+                    try {
+                        Logger.log(key + "DATA");
+                        LoadBalancer.Request r = this.linked.get(key).take();
+                        synchronized (r){r.notify();}
+                    }catch (InterruptedException e){
+                    }
                     try {
                         Count c = Count.fromString(args[4]);
                         CMonitor.jobresponse(key,c);
@@ -500,7 +542,6 @@ public class CMonitor {
                 this.out = new PrintWriter(
                         sc.getOutputStream()
                 );
-
 
                 Logger.log("Tunnel open");
             } catch (UnknownHostException e) {

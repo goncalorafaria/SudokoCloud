@@ -24,7 +24,9 @@ public class RemoteStorageReader {
             double v = Estimator.transform(
                     Count.fromString(row.get("Count")).mean(),
                     row.get("key").split(":")[0]);
+
             System.out.println(row.get("key") + ":" + v);
+            System.out.println(row.get("key") + ":" + Count.fromString(row.get("Count")).var());
 
 
 

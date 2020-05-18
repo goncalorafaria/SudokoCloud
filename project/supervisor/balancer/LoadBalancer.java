@@ -23,6 +23,8 @@ public class LoadBalancer {
     /* Workers : Idealmente seria um Set. */
     private static final Balancer worker = new LoadBalancer.Balancer();
 
+    private static String me = null;
+
     private static boolean handle = true;
 
     public LoadBalancer() {
@@ -41,6 +43,9 @@ public class LoadBalancer {
                     upperth = Double.parseDouble(args[2]);
                     if( args.length > 3){
                         cachesize = Integer.parseInt(args[3]);
+                        if( args.length > 4){
+                            me = args[4];
+                        }
                     }
                 }
             }
@@ -54,7 +59,8 @@ public class LoadBalancer {
             CMonitor.init(
                     lowerth,
                     upperth,
-                    cachesize);
+                    cachesize,
+                    me);
 
             // start redirection thread
             worker.start();
@@ -77,18 +83,18 @@ public class LoadBalancer {
         }
     }
 
-    static class Request extends Thread{
+    static class Request extends Thread {
         String query;
-        HttpExchange tunel;
+        Redirect redirect;
         URI uri;
 
         Request(String query, HttpExchange t) {
             this.query = query;
-            this.tunel = t;
+            this.redirect = new Redirect(t);
         }
 
         public String toString() {
-            return this.query + "\n" + this.tunel.toString();
+            return this.query + "\n" + this.redirect.toString();
         }
 
         static class Redirector implements HttpHandler {
@@ -112,43 +118,46 @@ public class LoadBalancer {
 
                 LoadBalancer.Request r = new LoadBalancer.Request(query, t);
                 r.uri = u;
-                r.start();
+                r.run();
             }
 
         }
 
-        public void run(){
-            CMonitor.Endpoint ep=null;
+        public void run() {
+            boolean go = true;
 
-            boolean go =true;
-            while(go) {
-                go = false;
+            String key = CloudStandart.makeKey(this.query);
+            String solution=null;
+            while(go){
                 try {
+                    CMonitor.Endpoint ep = CMonitor.decide(
+                            key);
 
-                    String key = CloudStandart.makeKey(this.query);
-
-                    ep = CMonitor.decide(
-                            key
-                    );
-
+                    ep.listening(key,this);
                     int port = 8000;
+                    this.redirect.passRequest(ep.getIp(), port, uri);
 
-                    String solution = Redirect.
-                            passRequestandWait(tunel, ep.getIp(), port, uri);
+                    try {
+                        synchronized (this) { this.wait(); }
+                        Logger.log("AWAKEN");
+                    } catch (InterruptedException e) {
+                        Logger.log("read timeout:" + e.toString());
+                    }
+                    go = !ep.isActive();
 
-                    Redirect.passResponse(solution, tunel);
-
-                } catch (InterruptedException e) {
-                } catch (MalformedURLException | URISyntaxException e) {
-                    return;
-                } catch (IOException e) {
-                    Logger.log("outer issue:" + e.toString());
-                    ep.faultdetected();
-                    go = true;
+                }catch (InterruptedException e){
+                    Logger.log("error balancing:" + e.toString());
+                }catch (IOException|URISyntaxException e){
+                    Logger.log("error passing message:" + e.toString());
                 }
             }
+            try {
+                solution = this.redirect.readResponse();
+                this.redirect.passResponse(solution);
+            }catch (IOException e){
+                Logger.log("error responding client:" + e.toString());
+            }
         }
-
     }
 
     static class Balancer extends Thread {
@@ -172,7 +181,7 @@ public class LoadBalancer {
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
-                        Redirect.send(r.tunel, location);
+                        r.redirect.send(location);
                     }else{
                         Logger.log("Autoscalling round ");
                     }
