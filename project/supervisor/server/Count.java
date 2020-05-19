@@ -60,9 +60,9 @@ public class Count implements java.io.Serializable {
 
     public double var(){
         if( n > 1){
-            return this.br_s/(n-1);
+            return Math.sqrt(this.br_s/(n-1));
         }else{
-            return this.br_count/4;
+            return Math.sqrt(this.br_count)/4;
         }
     }
 

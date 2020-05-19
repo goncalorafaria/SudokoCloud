@@ -10,6 +10,8 @@ source dependencies.sh
 #javac -Xlint:unchecked project/supervisor/storage/*.java 
 #javac -Xlint:unchecked project/supervisor/util/*.java
 
+javac project/pt/ulisboa/tecnico/cnv/server/*java
+
 javac tools/*.java
 javac project/supervisor/balancer/*.java
 javac project/supervisor/server/*.java 
