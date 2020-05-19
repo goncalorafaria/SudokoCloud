@@ -7,13 +7,14 @@ import supervisor.util.Logger;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Redirect {
     /**
      * Esta classe trata dos detalhos de mandar http redirect.
      */
 
-    public static void send(HttpExchange ex, String redirectPath)
+    public void send( String redirectPath)
             throws IOException {
 
         URI path;
@@ -24,14 +25,14 @@ public class Redirect {
             Logger.log("Redirection path");
             Logger.log(path.toString());
 
-            ex.getResponseHeaders().set("Location", path.toString());
+            t.getResponseHeaders().set("Location", path.toString());
 
-            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            t.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             //Required by firefox or js. (Super unsafe don't use in a serious project)
 
-            ex.sendResponseHeaders(307, -1);
+            t.sendResponseHeaders(307, -1);
             // 303 does not work properly. ()
-            ex.close();
+            t.close();
 
         } catch (URISyntaxException e) {
             Logger.log(e.toString());
@@ -39,8 +40,24 @@ public class Redirect {
         }
     }
 
-    public static String passRequestandWait(HttpExchange t, String ip, int port, URI inu)
+    private byte[] buffer = null;
+    HttpURLConnection cn = null;
+    HttpExchange t;
+
+
+    public Redirect(HttpExchange t){
+        this.t = t;
+    }
+
+
+
+    public void passRequest(String ip, int port, URI inu)
             throws URISyntaxException, IOException {
+
+        if( buffer == null ) {
+            buffer = new byte[t.getRequestBody().available()];
+            t.getRequestBody().read(buffer);
+        }
 
         URI outu = new URI(
                 inu.getScheme(),
@@ -53,16 +70,14 @@ public class Redirect {
 
         URL curl = new URL("http:" + outu.toString());
         Logger.log(curl.toString());
-        HttpURLConnection cn = (HttpURLConnection)curl.openConnection();
+
+        cn = (HttpURLConnection)curl.openConnection();
         cn.setRequestMethod("GET");
-
-        byte[] buffer = new byte[t.getRequestBody().available()];
-
-        t.getRequestBody().read(buffer);
 
         cn.setUseCaches(false);
         cn.setDoInput(true);
         cn.setDoOutput(true);
+        //cn.setReadTimeout(1);
 
         DataOutputStream wr = new DataOutputStream (
                 cn.getOutputStream());
@@ -71,8 +86,13 @@ public class Redirect {
         wr.flush();
         wr.close();
 
-        int status = cn.getResponseCode();
+    }
 
+    public String readResponse()
+            throws IOException {
+
+        //int status = cn.getResponseCode();
+        //
         InputStream is = cn.getInputStream();
 
         is.read(buffer);
@@ -80,8 +100,9 @@ public class Redirect {
         return new String(buffer);
     }
 
-    public static void passResponse(String solution, HttpExchange t) throws IOException {
+    public void passResponse(String solution) throws IOException {
 
+        //Logger.log("solution");
         Headers hdrs = t.getResponseHeaders();
         hdrs.add("Content-Type", "application/json");
         hdrs.add("Access-Control-Allow-Origin", "*");

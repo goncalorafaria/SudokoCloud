@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+
+
 public class CNode {
     /**
      *  This is the Server Hypervisor class.
@@ -158,8 +160,9 @@ public class CNode {
                             }
                             String bin = c.toBinary();
 
-                            if( mname.equals("Count") )
+                            if( mname.equals("Count") ) {
                                 CNode.tunnel.stream(tsk, bin);
+                            }
 
                             row.put(mname, c.toBinary());
                         }
@@ -350,9 +353,11 @@ public class CNode {
                     String message;
                     int mcounter = 0;
 
+                    Logger.log("Working!");
                     while (go) {
-                        message = this.lbq.poll(20, TimeUnit.SECONDS);
+                        message = this.lbq.poll(5, TimeUnit.SECONDS);
 
+                        Logger.log("message:" + message);
                         if (message != null) {
                             this.out.println(message);
                             this.out.flush();
@@ -370,20 +375,19 @@ public class CNode {
                                 }
                             }else{
                                 mcounter++;
-                            }
-                            if( mcounter > 4 ){
 
-                                go = false;
-                                downed = true;
-                                sc.close();
-                                Logger.log("Load Balancer most likely went down.");
+                                if( mcounter >= 3 ){
+                                    go = false;
+                                    downed = true;
+                                    sc.close();
+                                    Logger.log("Load Balancer most likely went down.");
+                                }
                             }
                         }
                     }
-                    //Logger.log("Tunnel open");
 
                 } catch (IOException e) {
-                    Logger.log(e.toString());
+                    Logger.log("outer" + e.toString());
                     Logger.log("Load Balancer most likely went down. Exception");
                     downed=true;
                 } catch (InterruptedException e) {

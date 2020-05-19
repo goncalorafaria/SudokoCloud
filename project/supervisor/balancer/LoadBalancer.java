@@ -23,6 +23,8 @@ public class LoadBalancer {
     /* Workers : Idealmente seria um Set. */
     private static final Balancer worker = new LoadBalancer.Balancer();
 
+    private static String me = null;
+
     private static boolean handle = true;
 
     public LoadBalancer() {
@@ -41,6 +43,9 @@ public class LoadBalancer {
                     upperth = Double.parseDouble(args[2]);
                     if( args.length > 3){
                         cachesize = Integer.parseInt(args[3]);
+                        if( args.length > 4){
+                            me = args[4];
+                        }
                     }
                 }
             }
@@ -50,12 +55,12 @@ public class LoadBalancer {
 
             CloudStandart.init();
             // Load local db
-
             // Connect to aws
             CMonitor.init(
                     lowerth,
                     upperth,
-                    cachesize);
+                    cachesize,
+                    me);
 
             // start redirection thread
             worker.start();
@@ -69,7 +74,6 @@ public class LoadBalancer {
                 Logger.log("Not handling failures directly.");
                 server.createContext("/sudoku", new Request.Redirector());
             }
-
             server.setExecutor(Executors.newCachedThreadPool());
 
             // start http server.
@@ -79,17 +83,19 @@ public class LoadBalancer {
         }
     }
 
-    static class Request {
+    static class Request extends Thread {
         String query;
-        HttpExchange tunel;
+        Redirect redirect;
+        URI uri;
+        AtomicBoolean shoudlread = new AtomicBoolean(false);
 
         Request(String query, HttpExchange t) {
             this.query = query;
-            this.tunel = t;
+            this.redirect = new Redirect(t);
         }
 
         public String toString() {
-            return this.query + "\n" + this.tunel.toString();
+            return this.query + "\n" + this.redirect.toString();
         }
 
         static class Redirector implements HttpHandler {
@@ -112,34 +118,54 @@ public class LoadBalancer {
                 String query = u.getQuery();
 
                 LoadBalancer.Request r = new LoadBalancer.Request(query, t);
-
-                CMonitor.Endpoint ep = null;
-
-                boolean go =true;
-                while(go) {
-                    go = false;
-                    try {
-                        ep = CMonitor.decide(CloudStandart.makeKey(r.query));
-
-                        int port = 8000;
-
-                        String solution = Redirect.
-                                passRequestandWait(t, ep.getIp(), port, u);
-
-                        Redirect.passResponse(solution, t);
-
-                    } catch (InterruptedException e) {
-                    } catch (MalformedURLException | URISyntaxException e) {
-                        return;
-                    } catch (IOException e) {
-                        ep.faultdetected();
-                        go = true;
-                    }
-                }
+                r.uri = u;
+                r.run();
             }
 
         }
 
+        public void run() {
+            boolean go = true;
+
+            String key = CloudStandart.makeKey(this.query);
+            String solution=null;
+            while(go){
+                go =false;
+                try {
+                    CMonitor.Endpoint ep = CMonitor.decide(
+                            key);
+
+                    //ep.listening(key,this);
+                    int port = 8000;
+                    this.redirect.passRequest(ep.getIp(), port, uri);
+
+                    try {
+                        this.redirect.cn.getInputStream();
+                    }catch(ConnectException e ){
+                        Logger.log("Connection failed.");
+                        go = true;
+                        CMonitor.deregister(ep.vm);
+                    }catch (IOException e){
+                        Logger.log("justsend" + e.toString());
+                    }
+                    Logger.log("UNBLOCKED");
+
+                }catch (InterruptedException e){
+                    Logger.log("error balancing:" + e.toString());
+                }catch (IOException|URISyntaxException e){
+                    Logger.log("error passing message:" + e.toString());
+                }
+            }
+
+            Logger.log("Writing");
+
+            try {
+                solution = this.redirect.readResponse();
+                this.redirect.passResponse(solution);
+            }catch (IOException e){
+                Logger.log("error responding client:" + e.toString());
+            }
+        }
     }
 
     static class Balancer extends Thread {
@@ -163,7 +189,7 @@ public class LoadBalancer {
 
                         String location = "http://" + redirectPath + ":8000/sudoku?" + r.query;
 
-                        Redirect.send(r.tunel, location);
+                        r.redirect.send(location);
                     }else{
                         Logger.log("Autoscalling round ");
                     }
