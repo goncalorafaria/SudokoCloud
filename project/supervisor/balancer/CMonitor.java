@@ -55,14 +55,14 @@ public class CMonitor {
             new AtomicInteger(0);
 
     /* dictionary of requested virtual machines. */
-    private static final Map<String, CMonitor.Endpoint> vmstates =
+    public static final Map<String, CMonitor.Endpoint> vmstates =
             new ConcurrentHashMap<>();
 
     /* Storage persistente que guarda o historico das metricas para cada pedido. */
-    private static Oracle requestTable;
+    public static Oracle requestTable;
 
     /* Máquinas virtuais que estão a prontas a receber pedidos. */
-    private final static Set<String> activevms =
+    public final static Set<String> activevms =
             Collections.newSetFromMap(
                     new ConcurrentHashMap<String,Boolean>());
 
@@ -243,6 +243,7 @@ public class CMonitor {
      * Termina imediatamente uma Máquina Virtual - (Inseguro) */
     private static void recall(String vmid) {
 
+        if(skip_autoscale) return;
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
 
         termInstanceReq.withInstanceIds(vmid);
@@ -276,7 +277,6 @@ public class CMonitor {
                 Logger.log(".");
                 sleep(5000);
                 tmp.addAll(CMonitor.activevms);
-                if(skip_autoscale) break;
             }
 
             Set<Endpoint> hset = new HashSet<>();
@@ -329,7 +329,7 @@ public class CMonitor {
         return instances;
     }
 
-    static class Endpoint extends Thread implements Comparable<Endpoint> {
+    public static class Endpoint extends Thread implements Comparable<Endpoint> {
         /**
          * Esta classe representa cada vm no load balancer.
          *      - faz comunicação por tcp.
@@ -347,6 +347,8 @@ public class CMonitor {
         private AtomicLong load = new AtomicLong(0L);
         private long lastLoad = 0;
         private long lastLoadCount = 0;
+        
+        public ConcurrentHashMap<String,ConcurrentLinkedDeque<Count>> last_count=new ConcurrentHashMap<String,ConcurrentLinkedDeque<Count>>();
 
         public Endpoint(String vm) {
             this.vm = vm;
@@ -432,9 +434,13 @@ public class CMonitor {
                 } catch (IOException e) {
                     offc++;
                     if( offc >= 3){
-                        this.faultdetected();
-                        this.active.set(false);
-                        return;
+                        if(!skip_autoscale){
+                            this.faultdetected();
+                            this.active.set(false);
+                            return;
+                        }else{
+                            Logger.log("Possible crash: " + vm);
+                        }
                     }
                     //Logger.log( vm + ">" + e.toString() + "|" + active.get());
                 }
@@ -478,6 +484,12 @@ public class CMonitor {
                         CMonitor.jobresponse(key,c);
                         //this.rcache.remove(key);
                         //Logger.log("endpoint ------------:"+this.rcache.toString());
+                        if(skip_autoscale){
+                            ConcurrentLinkedDeque<Count> q = new ConcurrentLinkedDeque<Count>();
+                            last_count.putIfAbsent(key, q);
+                            q = last_count.get(key);
+                            q.add(c);
+                        }
                     }catch (ClassNotFoundException e){
                     }
                     break;
