@@ -465,13 +465,11 @@ public class CMonitor {
                 case "data" :{
                     String key = args[1]+":"+args[2]+":"+args[3];
 
-                    try {
-                        Count c = Count.fromString(args[4]);
-                        CMonitor.jobresponse(key,c);
-                        //this.rcache.remove(key);
-                        //Logger.log("endpoint ------------:"+this.rcache.toString());
-                    }catch (ClassNotFoundException e){
-                    }
+                    Count c = Count.fromString(args[4]);
+                    CMonitor.jobresponse(key,c);
+                    //this.rcache.remove(key);
+                    //Logger.log("endpoint ------------:"+this.rcache.toString());
+
                     break;
                 }
                 case "queue" :{

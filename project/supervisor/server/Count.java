@@ -31,15 +31,6 @@ public class Count implements java.io.Serializable {
         n = c.n;
     }
 
-    public static Count fromString(String s) throws IOException, ClassNotFoundException {
-        byte[] data = Base64.decode(s);
-        ObjectInputStream ois = new ObjectInputStream(
-                new ByteArrayInputStream(data));
-        Object o = ois.readObject();
-        ois.close();
-        return (Count) o;
-    }
-
     public void aggregate(Count b) {
         this.n += 1;
 
@@ -131,12 +122,36 @@ public class Count implements java.io.Serializable {
         return "instruction:basicblock:method:branch:increment:var";
     }
 
-    public String toBinary() throws IOException {
+    public String toBinary(){
+        String bin = br_count + ":" + br_s + ":" + n;
+
+        return bin;
+         /*
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(this);
         oos.close();
         return Base64.encodeAsString(baos.toByteArray());
+         */
+    }
+
+    public static Count fromString(String bin){
+        String[] argv = bin.split(":");
+
+        Count c = new Count();
+        c.n = Long.parseLong(argv[2]);
+        c.br_s =  Double.parseDouble(argv[1]);
+        c.br_count =  Double.parseDouble(argv[0]);
+
+        return c;
+         /*
+        byte[] data = Base64.decode(s);
+        ObjectInputStream ois = new ObjectInputStream(
+                new ByteArrayInputStream(data));
+        Object o = ois.readObject();
+        ois.close();
+        return (Count) o;
+         */
     }
 }
 

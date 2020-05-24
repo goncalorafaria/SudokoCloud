@@ -54,7 +54,7 @@ public class CNode {
 
         CNode.tunnel = new CNode.EndPoint();
 
-        Logger.publish(false,false);
+        Logger.publish(true,false);
     }
 
     /** Associa um novo pedido a um thread. */
@@ -142,38 +142,18 @@ public class CNode {
                 try {
                     Task itask = CNode.taskq.take();
                     String tsk = itask.getKey();
-                    Map<String, String> row;
+                    Logger.log("GOOOOO");
+                    Count c = requestTable.put(
+                            tsk,
+                            itask.getMetric("Count"));
 
-                    row = requestTable.get(tsk);
-                    if (row == null)
-                        row = new HashMap<>();
+                    if( c != null)
+                        CNode.tunnel.stream(
+                                tsk,
+                                c.toBinary());
 
-                    for (String mname : itask.metricsK()) {
-
-                        Count c = itask.getMetric(mname);
-
-                        if (c.valid()) {
-                            if (row.containsKey(mname)) {
-                                Count cold = Count.fromString(row.get(mname));
-                                cold.aggregate(c);
-                                c = cold;
-                            }
-                            String bin = c.toBinary();
-
-                            if( mname.equals("Count") ) {
-                                CNode.tunnel.stream(tsk, bin);
-                            }
-
-                            row.put(mname, c.toBinary());
-                        }
-                    }
-                    requestTable.put(tsk, row);
 
                 } catch (InterruptedException e) {
-                    Logger.log(e.getMessage());
-                } catch (IOException e) {
-                    Logger.log(e.getMessage());
-                } catch (ClassNotFoundException e) {
                     Logger.log(e.getMessage());
                 }
             }

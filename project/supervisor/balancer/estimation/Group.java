@@ -31,14 +31,9 @@ public class Group implements Comparable<Group>{
 
         Element(Map<String, String> value, String un) {
             this.un = un;
-            try {
-                this.c = Count.fromString(value.get("Count"));
-                ucb.setUpdate(c.n);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }catch (ClassNotFoundException e){
-                e.printStackTrace();
-            }
+            this.c = Count.fromString(value.get("Count"));
+            ucb.setUpdate(c.n);
+
         }
 
         Element(Count c, String un) {
@@ -71,15 +66,10 @@ public class Group implements Comparable<Group>{
         }
 
         void update(Map<String,String> value){
-            try {
-                Count candidate = Count.fromString(value.get("Count"));
-                updateDirect(candidate);
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }catch (ClassNotFoundException e){
-                e.printStackTrace();
-            }
+            Count candidate = Count.fromString(value.get("Count"));
+            updateDirect(candidate);
+
         }
 
         @Override
