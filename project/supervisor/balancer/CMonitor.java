@@ -45,10 +45,10 @@ public class CMonitor {
     private static final String keyname = CloudStandart.keyname;
     private static final String securitygroups = CloudStandart.securitygroups;
 
-    private static final long idealThreashold = 200000;
+    private static final long idealThreashold = 600000;
     private static final long ceilingThreashold = (int)(idealThreashold * 2);
-    private static long scaleUpThreashold = (int)(idealThreashold * 0.75);
-    private static long scaleDownThreashold = (int)(idealThreashold * 0.25);
+    private static long scaleUpThreashold = (int)(idealThreashold * 0.8);
+    private static long scaleDownThreashold = (int)(idealThreashold * 0.20);
 
     /* number of virtual machines starting. */
     private static final AtomicInteger startingvms =
@@ -172,7 +172,7 @@ public class CMonitor {
         RunInstancesRequest runInstancesRequest =
                 new RunInstancesRequest();
 
-        runInstancesRequest.withImageId(imageid)
+        runInstancesRequest.withImageId(imageid).withMonitoring(true)
                 .withInstanceType(instancetype)
                 .withMinCount(1)
                 .withMaxCount(1)

@@ -11,10 +11,10 @@ public class CloudStandart {
     public static String region = "us-east-1";
     public static int inbound_channel_port = 8088;
 
-    public static String ami = "ami-03325428ec24a6273";
+    public static String ami = "ami-0345a950e41c49326";
     public static String collectorimageid = "ami-0cb790308f7591fa6";
     public static String instancetype = "t2.micro";
-    public static String keyname = "CNV-lab-AWS";
+    public static String keyname = "CNV-AWS-lab";
     public static String securitygroups = "CNV-ssh+http";
 
     public static void init(){

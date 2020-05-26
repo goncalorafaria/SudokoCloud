@@ -31,6 +31,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -68,12 +69,8 @@ import supervisor.server.Count;
 import supervisor.storage.TaskStorage;
 import supervisor.util.CloudStandart;
 
-/*
-Tester procedure to gather
-frequency : n_int : %cpu 
-For 1 webserver
-*/
-public class Tester {
+
+public class Tester_autoscalar {
 
     static LinkedList<Point> rec_data = new LinkedList<Point>();
     static AmazonEC2      ec2;
@@ -165,14 +162,7 @@ public class Tester {
     //static String cp8 = "http://localhost:8000/sudoku?s=CP&un=300&n1=25&n2=25&i=SUDOKU_PUZZLE_16x16_06&board=[[24,0,0,9,0,21,0,19,4,10,0,20,0,1,16,7,0,18,0,13,5,15,0,8,6],[14,3,8,0,12,0,24,15,11,2,21,0,19,13,9,0,20,0,1,6,10,0,23,16,25],[16,7,0,11,4,13,25,1,0,18,0,22,15,6,5,9,0,17,10,23,0,12,0,21,24],[22,5,1,0,19,16,6,0,23,7,4,24,14,0,25,15,21,12,8,11,17,0,20,18,3],[0,6,0,10,17,20,0,3,0,5,11,18,0,8,23,16,24,4,19,25,1,13,22,7,9],[20,0,3,15,5,0,16,23,21,13,1,0,22,0,7,18,6,19,14,10,24,11,4,0,17],[0,17,9,21,24,10,0,14,1,3,19,13,0,11,18,2,0,23,22,12,25,7,0,15,5],[13,14,25,0,11,0,18,17,7,19,10,12,9,4,21,0,3,0,15,8,22,0,2,0,16],[12,16,23,8,1,25,5,22,15,11,0,17,3,24,20,13,4,9,21,7,6,10,0,19,14],[7,0,22,0,10,2,8,0,6,12,23,5,16,0,14,0,25,24,20,17,13,21,3,9,1],[0,20,5,23,2,14,0,10,13,4,16,6,0,19,17,3,8,7,0,15,0,24,25,22,18],[3,0,6,1,8,0,15,0,20,23,24,2,10,18,13,14,9,0,11,22,19,17,16,4,7],[10,24,17,16,18,7,9,25,19,8,22,3,21,12,11,6,5,20,4,2,23,14,13,1,15],[21,19,4,22,15,18,11,16,2,24,9,25,7,14,8,23,10,13,17,1,20,5,6,3,12],[11,13,12,14,7,22,3,6,17,1,15,23,20,5,4,19,18,25,16,24,9,8,10,2,21],[5,11,10,24,21,6,19,18,22,17,13,4,12,3,2,8,15,14,23,16,7,9,1,25,20],[2,9,18,20,14,1,10,8,16,21,17,19,11,7,24,4,22,3,25,5,12,6,15,23,13],[17,15,7,12,3,4,23,2,9,20,5,16,25,22,6,10,11,1,13,18,21,19,24,14,8],[19,1,13,4,23,3,12,24,14,25,8,10,18,9,15,20,17,6,7,21,2,16,5,11,22],[6,8,16,25,22,11,13,7,5,15,14,21,23,20,1,24,12,2,9,19,3,18,17,10,4],[18,22,11,3,16,5,2,12,10,9,25,14,8,21,19,17,13,15,6,20,4,1,7,24,23],[23,12,15,7,13,8,17,20,25,6,18,11,4,2,22,21,1,10,24,9,16,3,14,5,19],[1,4,24,5,20,15,7,11,3,16,6,9,13,23,12,25,19,8,2,14,18,22,21,17,10],[25,10,14,17,6,19,1,21,24,22,7,15,5,16,3,12,23,11,18,4,8,20,9,13,2],[8,21,19,2,9,23,4,13,18,14,20,1,24,17,10,22,7,16,5,3,15,25,12,6,11]]";
 
     static String cp10 = "http://localhost:8000/sudoku?s=CP&un=300&n1=25&n2=25&i=SUDOKU_PUZZLE_25x25_01&board=[[24,0,0,9,0,21,0,19,4,10,0,20,0,1,16,7,0,18,0,13,5,15,0,8,6],[14,3,8,0,12,0,24,15,11,2,21,0,19,13,9,0,20,0,1,6,10,0,23,16,25],[16,7,0,11,4,13,25,1,0,18,0,22,15,6,5,9,0,17,10,23,0,12,0,21,24],[22,5,1,0,19,16,6,0,23,7,4,24,14,0,25,15,21,12,8,11,17,0,20,18,3],[0,6,0,10,17,20,0,3,0,5,11,18,0,8,23,16,24,4,19,25,1,13,22,7,9],[20,0,3,15,5,0,16,23,21,13,1,0,22,0,7,18,6,19,14,10,24,11,4,0,17],[0,17,9,21,24,10,0,14,1,3,19,13,0,11,18,2,0,23,22,12,25,7,0,15,5],[13,14,25,0,11,0,18,17,7,19,10,12,9,4,21,0,3,0,15,8,22,0,2,0,16],[12,16,23,8,1,25,5,22,15,11,0,17,3,24,20,13,4,9,21,7,6,10,0,19,14],[7,0,22,0,10,2,8,0,6,12,23,5,16,0,14,0,25,24,20,17,13,21,3,9,1],[0,20,5,23,2,14,0,10,13,4,16,6,0,19,17,3,8,7,0,15,0,24,25,22,18],[3,0,6,1,8,0,15,0,20,23,24,2,10,18,13,14,9,0,11,22,19,17,16,4,7],[10,24,17,16,18,7,9,25,19,8,22,3,21,12,11,6,5,20,4,2,23,14,13,1,15],[21,19,4,22,15,18,11,16,2,24,9,25,7,14,8,23,10,13,17,1,20,5,6,3,12],[11,13,12,14,7,22,3,6,17,1,15,23,20,5,4,19,18,25,16,24,9,8,10,2,21],[5,11,10,24,21,6,19,18,22,17,13,4,12,3,2,8,15,14,23,16,7,9,1,25,20],[2,9,18,20,14,1,10,8,16,21,17,19,11,7,24,4,22,3,25,5,12,6,15,23,13],[17,15,7,12,3,4,23,2,9,20,5,16,25,22,6,10,11,1,13,18,21,19,24,14,8],[19,1,13,4,23,3,12,24,14,25,8,10,18,9,15,20,17,6,7,21,2,16,5,11,22],[6,8,16,25,22,11,13,7,5,15,14,21,23,20,1,24,12,2,9,19,3,18,17,10,4],[18,22,11,3,16,5,2,12,10,9,25,14,8,21,19,17,13,15,6,20,4,1,7,24,23],[23,12,15,7,13,8,17,20,25,6,18,11,4,2,22,21,1,10,24,9,16,3,14,5,19],[1,4,24,5,20,15,7,11,3,16,6,9,13,23,12,25,19,8,2,14,18,22,21,17,10],[25,10,14,17,6,19,1,21,24,22,7,15,5,16,3,12,23,11,18,4,8,20,9,13,2],[8,21,19,2,9,23,4,13,18,14,20,1,24,17,10,22,7,16,5,3,15,25,12,6,11]]";
-    
-    
-    //cp6,dlx3,
-    //dlx3
-    
-    //cp1
-    
-    
+
        
     static String[] samples = {
         q1,dlx1,cp1,dlx6,q3,cp6,dlx3,cp3,
@@ -188,13 +178,43 @@ public class Tester {
     
     static int number_of_active_requests =0;
     
+    static class Series extends Thread{
+                    // Atomic integer containing the next thread ID to be assigned
+       private static final AtomicInteger nextId = new AtomicInteger(0);
+
+       // Thread local variable containing each thread's ID
+       private static final ThreadLocal<Integer> threadId =
+           new ThreadLocal<Integer>() {
+               @Override protected Integer initialValue() {
+                   return nextId.getAndIncrement();
+           }
+       };
+
+       // Returns the current thread's unique ID, assigning it if necessary
+       public static int get() {
+           return threadId.get();
+       }
+        @Override
+        public void run() {
+            for (int i = 0; i<20; i++){
+                System.out.println(i);
+                request(String.valueOf(get()),i);
+                try {
+                    Thread.sleep(freq);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Tester_autoscalar.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }
+    
     static class Request extends Thread {
         
         private final String threadId;
         private final int id;
 
 
-        private Request(long freq, int id) {
+        private Request(String freq, int id) {
             this.threadId = freq+"-"+id;
             this.id = id;
         }
@@ -213,18 +233,8 @@ public class Tester {
             
 
             HttpPost httppost = new HttpPost(samples[id]);
-            
-
-            // Request parameters and other properties.
-            //List<NameValuePair> params = new ArrayList<NameValuePair>(2);
-            //params.add(new BasicNameValuePair("param-1", "12345"));
-            //params.add(new BasicNameValuePair("param-2", "Hello!"));
-            //httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-            
             httppost.addHeader("Cache-Control","no-cache");
             httppost.addHeader("Connection","keep-alive");
-//            httppost.addHeader("Content-Type","text/plain;charset=UTF-8");
-//            httppost.addHeader("Accept","*/*");
 
             StopWatch watch = new StopWatch();
             HttpResponse response = null;
@@ -248,223 +258,145 @@ public class Tester {
             }
 
             long rec_time = watch.getTotalTimeMillis();
-
-            String key = CloudStandart.makeKey(httppost.getURI().getQuery());
-            if (entity != null) {
-                try (InputStream instream = entity.getContent()) {
-                    // store results
-                    Result r = new Result();
-                    r.duration = rec_time;
-                    r.start_time = start_time;
-                    r.estimate = oracle.predict(key);
-                    r.start_time_readable = start_time_readable;
-                    r.avg_cpu = getLastMinAvgCpu();
-                    r.vm_total_load = endpoint.getLoad();
-                    r.active_requests = number_of_active_requests;
-                    String solver = solvers[id];
-                    while (!endpoint.last_count.containsKey(key) || endpoint.last_count.get(key).size()<1){
-                        if(endpoint.getLoad()==0){
-                            Thread.sleep(5000);
-                            if(!endpoint.last_count.containsKey(key) || endpoint.last_count.get(key).size()<1) throw new IOException("no values");
-                        }
-                        System.out.println(threadId+" waiting for values");
-                        Thread.sleep(5000);
-                    }
-                    r.count = Estimator.transform(endpoint.last_count.get(key).pollFirst().getlocked(),solver);
-                    results.put(threadId, r);
-                    
-                } catch (IOException ex) {
-                    Logger.getLogger(Tester.class.getName()).log(Level.SEVERE, null, ex);
-                    Result r = new Result();
-                    r.duration = rec_time;
-                    r.start_time = start_time;
-                    r.estimate = oracle.predict(key);
-                    r.start_time_readable = start_time_readable;
-                    r.avg_cpu = getLastMinAvgCpu();
-                    r.vm_total_load = endpoint.getLoad();
-                    r.active_requests = number_of_active_requests;
-                    String solver = solvers[id];
-                    r.count = -1;
-                    results.put(threadId, r);
-                } catch (UnsupportedOperationException ex) {
-                    Logger.getLogger(Tester.class.getName()).log(Level.SEVERE, null, ex);
-                    Result r = new Result();
-                    r.duration = rec_time;
-                    r.start_time = start_time;
-                    r.estimate = oracle.predict(key);
-                    r.start_time_readable = start_time_readable;
-                    r.avg_cpu = getLastMinAvgCpu();
-                    r.vm_total_load = endpoint.getLoad();
-                    String solver = solvers[id];
-                    r.count = -1;
-                    results.put(threadId, r);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(Tester.class.getName()).log(Level.SEVERE, null, ex);
-                    Result r = new Result();
-                    r.duration = rec_time;
-                    r.start_time = start_time;
-                    r.estimate = oracle.predict(key);
-                    r.start_time_readable = start_time_readable;
-                    r.avg_cpu = getLastMinAvgCpu();
-                    r.vm_total_load = endpoint.getLoad();
-                    r.active_requests = number_of_active_requests;
-                    String solver = solvers[id];
-                    r.count = -1;
-                    results.put(threadId, r);
-                }
-            }
             System.out.println(threadId+" finished");
         }
     }
-    public static void request(long freq, int id) {
-        Request r = new Request(freq,id);
+    public static void request(String key, int id) {
+        Request r = new Request(key,id);
         es.execute(r);
-        //r.start();
     }
     
-    static String[] balancer_param = {"false", "0.25", "0.75", "50", "2"};
+    static String[] balancer_param = {"false", "0.20", "0.80", "50", "2"};
     
+    static long freq = 80000;
+
     public static void main(String[] args) throws Exception {
 				boolean startInstance = false;
         System.out.println("===========================================");
-        System.out.println("Testing CPU usage - v1.2.9");
+        System.out.println("Testing load - v1.3");
         System.out.println("- Initializing Load Balancer and client");
         System.out.println("===========================================");
 
         
         init();
-        
-        
-        DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
-        List<Reservation> reservations = describeInstancesResult.getReservations();
-        Set<Instance> instances = new HashSet<Instance>();
 
-        System.out.println("total reservations = " + reservations.size());
-        for (Reservation reservation : reservations) {
-            instances.addAll(reservation.getInstances());
-        }
-        instance = (Instance) instances.toArray()[0];
-        
-        //TaskStorage.init(false);
-        //oracle = new Oracle(50);
-            
-        // Starting the load balancer with auto-scaling disabled
-        
-        CMonitor.skip_autoscale = true;
-        Thread t = new Thread(
-            new Runnable() {
-                @Override
-                public void run() {
-                    LoadBalancer.main(balancer_param);
+        for (double tr = 0.1; tr<=0.4; tr=tr+0.1){
+            balancer_param[1] = String.valueOf(tr);
+            CMonitor.skip_autoscale = false;
+            Thread t = new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        LoadBalancer.main(balancer_param);
+                    }
                 }
+            );
+            t.start();
+
+            Thread.sleep(20000);
+
+            while(CMonitor.requestTable==null){
+                Thread.sleep(500);
             }
-        );
-        t.start();
+            oracle = CMonitor.requestTable;
+
+            while(CMonitor.vmstates.size()<1 || CMonitor.activevms.size()<1){
+                Thread.sleep(500);
+            }
+
+
+            for (CMonitor.Endpoint e : CMonitor.vmstates.values()) {
+                endpoint = e;
+                break;
+            }
+
+
+
+            System.out.println("===========================================");
+            System.out.println("Starting the requests");
+            System.out.println("===========================================");
+
         
-        Thread.sleep(20000);
-        
-        while(CMonitor.requestTable==null){
-            Thread.sleep(500);
-        }
-        oracle = CMonitor.requestTable;
-        
-        while(CMonitor.vmstates.size()<1 || CMonitor.activevms.size()<1){
-            Thread.sleep(500);
-        }
-        
-                
-        for (CMonitor.Endpoint e : CMonitor.vmstates.values()) {
-            endpoint = e;
-            break;
-        }
-        
-        
-        
-        System.out.println("===========================================");
-        System.out.println("Starting the requests");
-        System.out.println("===========================================");
-        
-        
-        
-        for (long freq = 90000; freq<=900000; freq=freq+20000){
             StopWatch watch = new StopWatch();
+            StopWatch watch2 = new StopWatch();
             long start_time = System.currentTimeMillis();
             String start_time_readable = Calendar.getInstance().getTime().toString();
             watch.start();
+            watch2.start();
         
             es = Executors.newCachedThreadPool();
             System.out.println("Tester.main(): freq = "+freq);
-            for (int i = 0; i<20; i++){
-                System.out.println(i);
-                request(freq,i);
+            int[] load = {2,4,8,2,4,8};
+            int[] load_desc = {16,4,2,2,1,1};
+            
+            for(int series=0; series<6; series++){
+                for(int i=0; i<load_desc[series]; i++){
+                    Series s = new Series();
+                    s.start();
+                }
                 Thread.sleep(freq);
             }
             
             Thread.sleep(freq);
             watch.stop();
             long rec_time = watch.getTotalTimeMillis();
-            csvWriter_extra(String.valueOf(freq),String.valueOf(rec_time),String.valueOf(getAvgCpu(rec_time)));
-            
+            LinkedList<Point> fv = getAvgCpu();
+            int sum = 0;
+            for (Point d : fv) sum += d.average;
+            double average = 1.0d * sum / fv.size();
+            //csvWriter_extra(String.valueOf(tr),String.valueOf(rec_time),String.valueOf(average));
             System.out.println("===========================================");
-            System.out.println(freq+" Run:\ntime: "+String.valueOf(rec_time)+" cpu: "+String.valueOf(getAvgCpu(rec_time)));
+            System.out.println(tr+" Run:\ntime: "+String.valueOf(rec_time)+" cpu: "+String.valueOf(average));
             System.out.println("Waiting for responses...");
             System.out.println("===========================================");
 
             es.shutdown();
             while(!es.isTerminated() && endpoint.getLoad()!=0){
                 System.out.println("Active threads: "+Thread.activeCount());
-                //Thread.sleep(10000);
                 es.awaitTermination(10, TimeUnit.SECONDS);
             }
+            watch.stop();
+            long rec_time2 = watch.getTotalTimeMillis();
+            csvWriter_extra(String.valueOf(tr),String.valueOf(rec_time),String.valueOf(average),String.valueOf(rec_time2));
             Thread.sleep(20000);
-            System.out.println("awaiting for last threads to finish...");
+            System.out.println("Took : "+String.valueOf(rec_time2)+" ms\nawaiting for last threads to finish...");
             es.shutdownNow();
 
-            //boolean finished = es.awaitTermination(10, TimeUnit.MINUTES);
             // all tasks have finished or the time has been reached.
             
-            System.out.println("===========================================");
-            System.out.println("Storing results in csv");
-            System.out.println("===========================================");
-
-            csvWriter(results);
+//            System.out.println("===========================================");
+//            System.out.println("Storing results in csv");
+//            System.out.println("===========================================");
+//
+//            csvWriter(results);
             
-            
+            t.interrupt();
         }
+
+    }
+
+    private static class Point {
+        
+        private static int id_count=0;
+        
+        final int id;
+        
+        double average;
+
+        public Point(double av) {
+            this.id = id_count++;
+            this.average = av;
+        }
+    }
+    
+    public static LinkedList<Point> getAvgCpu(){
         
 
-        
-        
-//        System.out.println("===========================================");
-//        System.out.println("Waiting for responses...");
-//        System.out.println("===========================================");
-//        
-//        es.shutdown();
-//        while(Thread.activeCount() > 3){
-//            System.out.println("Active threads: "+Thread.activeCount());
-//            Thread.sleep(10000);
-//        }
-//        System.out.println("awaiting for last threads to finish...");
-//        
-//        boolean finished = es.awaitTermination(10, TimeUnit.MINUTES);
-//        // all tasks have finished or the time has been reached.
-//        
-//        
-//        System.out.println("===========================================");
-//        System.out.println("Storing results in csv");
-//        System.out.println("===========================================");
-//        
-//        csvWriter(results);
-        
-
-        // http://ec2-52-201-237-28.compute-1.amazonaws.com:8000/sudoku?s=BFS&un=81&n1=9&n2=9&i=SUDOKU_PUZZLE_9x9_101&board=[[2,0,0,8,0,5,0,9,1],[9,0,8,0,7,1,2,0,6],[0,1,4,2,0,3,7,5,8],[5,0,1,0,8,7,9,2,4],[0,4,9,6,0,2,0,8,7],[7,0,2,1,4,9,3,0,5],[1,3,7,5,0,6,0,4,9],[4,2,5,0,1,8,6,0,3],[0,9,6,7,3,4,0,1,2]]
-        
-        
         try {
 
-//            DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
-//            List<Reservation> reservations = describeInstancesResult.getReservations();
-//            Set<Instance> instances = new HashSet<Instance>();
+            DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
+            List<Reservation> reservations = describeInstancesResult.getReservations();
+            Set<Instance> instances = new HashSet<Instance>();
 
             System.out.println("total reservations = " + reservations.size());
             for (Reservation reservation : reservations) {
@@ -472,7 +404,7 @@ public class Tester {
             }
             System.out.println("total instances = " + instances.size());
             /* total observation time in milliseconds */
-            long offsetInMilliseconds = 1000 * 60 * 10;
+            long offsetInMilliseconds = 1000 * 60;
             Dimension instanceDimension = new Dimension();
             instanceDimension.setName("InstanceId");
             List<Dimension> dims = new ArrayList<Dimension>();
@@ -521,75 +453,7 @@ public class Tester {
                 System.out.println("Error Code: " + ase.getErrorCode());
                 System.out.println("Request ID: " + ase.getRequestId());
         }
-    }
-
-    private static class Point {
-        
-        private static int id_count=0;
-        
-        final int id;
-        
-        double average;
-
-        public Point(double av) {
-            this.id = id_count++;
-            this.average = av;
-        }
-    }
-    
-    public static Double getAvgCpu(long offsetInMilliseconds){
-        
-        try {
-
-            
-            /* total observation time in milliseconds */
-            //long offsetInMilliseconds = 1000 * 60;
-            Dimension instanceDimension = new Dimension();
-            instanceDimension.setName("InstanceId");
-            List<Dimension> dims = new ArrayList<Dimension>();
-            dims.add(instanceDimension);
-            
-            
-                String name = instance.getInstanceId();
-                String state = instance.getState().getName();
-                if (state.equals("running")) { 
-                    instanceDimension.setValue(name);
-                    
-                    List<String> metrics = new ArrayList<String>();
-                    metrics.add("Average");
-                    metrics.add("Maximum");
-                    metrics.add("Minimum");
-            GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
-                    .withStartTime(new Date(new Date().getTime() - offsetInMilliseconds))
-                    .withNamespace("AWS/EC2")
-                    .withPeriod(60)
-                    .withMetricName("CPUUtilization")
-                    .withStatistics(metrics)
-                    .withDimensions(instanceDimension)
-                    .withEndTime(new Date());
-                     GetMetricStatisticsResult getMetricStatisticsResult = 
-                         cloudWatch.getMetricStatistics(request);
-                     List<Datapoint> datapoints = getMetricStatisticsResult.getDatapoints();
-                     for (Datapoint dp : datapoints) {
-                       return dp.getAverage();
-                       
-                     }
-                 }
-                 else {
-                    System.out.println("instance not running id = " + name);
-                    return -1d;
-                 }
-            
-            
-            
-        } catch (AmazonServiceException ase) {
-                System.out.println("Caught Exception: " + ase.getMessage());
-                System.out.println("Reponse Status Code: " + ase.getStatusCode());
-                System.out.println("Error Code: " + ase.getErrorCode());
-                System.out.println("Request ID: " + ase.getRequestId());
-                return -1d;
-        }
-        return getLastMinAvgCpu();
+        return rec_data;
     }
 
     public static Double getLastMinAvgCpu(){
@@ -677,7 +541,7 @@ public class Tester {
         }
     }
 
-    public static void csvWriter_extra(String id, String message1, String message2) throws IOException {
+    public static void csvWriter_extra(String id, String message1, String message2, String message3) throws IOException {
         String eol = System.getProperty("line.separator");
 
         try (Writer writer = new FileWriter("results_"+balancer_param.toString()+".csv")) {
@@ -686,6 +550,8 @@ public class Tester {
                   .append(message1)
                   .append(',')
                   .append(message2)
+                  .append(',')
+                  .append(message3)
                   .append(eol);
         } catch (IOException ex) {
           ex.printStackTrace(System.err);
